@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:newbank/repositories/usuario_repository.dart';
 import 'home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -9,6 +10,7 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  final _usuarioRepository = UsuarioRepository();
   final _emailController = TextEditingController();
   final _senhaController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
@@ -16,8 +18,11 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _senhaVisivel = false;
 
   Future<bool> _verificarCredenciais(String email, String senha) async {
-    await Future.delayed(const Duration(seconds: 1));
-    return email == 'teste@email.com' && senha == '123456';
+    final usuario = await _usuarioRepository.findByEmail(email);
+    if (usuario == null) {
+      return false;
+    }
+    return _usuarioRepository.verifyPassword(usuario, senha);
   }
 
   Future<void> _fazerLogin() async {
