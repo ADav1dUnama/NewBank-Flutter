@@ -17,6 +17,13 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _carregando = false;
   bool _senhaVisivel = false;
 
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _senhaController.dispose();
+    super.dispose();
+  }
+
   Future<bool> _verificarCredenciais(String email, String senha) async {
     final usuario = await _usuarioRepository.findByEmail(email);
     if (usuario == null) {
