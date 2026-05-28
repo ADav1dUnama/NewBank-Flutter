@@ -256,7 +256,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           width: double.infinity,
                           height: 52,
                           child: OutlinedButton.icon(
-                            onPressed: () {},
+                            onPressed: null,
                             icon: const Icon(Icons.fingerprint, color: Color(0xFF1B7A3E)),
                             label: const Text(
                               'Entrar com biometria',
