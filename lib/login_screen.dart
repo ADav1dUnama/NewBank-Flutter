@@ -34,6 +34,8 @@ class _LoginScreenState extends State<LoginScreen> {
       _senhaController.text.trim(),
     );
 
+    if (!mounted) return;
+
     setState(() => _carregando = false);
 
     if (sucesso) {
