@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:newbank/models/usuario.dart';
 import 'package:newbank/repositories/usuario_repository.dart';
+import 'cadastro_screen.dart';
 import 'home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -24,19 +26,20 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  Future<bool> _verificarCredenciais(String email, String senha) async {
+  Future<Usuario?> _verificarCredenciais(String email, String senha) async {
     final usuario = await _usuarioRepository.findByEmail(email);
     if (usuario == null) {
-      return false;
+      return null;
     }
-    return _usuarioRepository.verifyPassword(usuario, senha);
+    final isValid = _usuarioRepository.verifyPassword(usuario, senha);
+    return isValid ? usuario : null;
   }
 
   Future<void> _fazerLogin() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _carregando = true);
 
-    final sucesso = await _verificarCredenciais(
+    final usuarioLogado = await _verificarCredenciais(
       _emailController.text.trim(),
       _senhaController.text.trim(),
     );
@@ -45,10 +48,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() => _carregando = false);
 
-    if (sucesso) {
+    if (usuarioLogado != null) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
+        MaterialPageRoute(builder: (_) => HomeScreen(usuario: usuarioLogado)),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -131,7 +134,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 28),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 28,
+                    vertical: 28,
+                  ),
                   child: Form(
                     key: _formKey,
                     child: Column(
@@ -153,14 +159,23 @@ class _LoginScreenState extends State<LoginScreen> {
                         const SizedBox(height: 24),
 
                         // Campo Email
-                        const Text('Email', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                        const Text(
+                          'Email',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                        ),
                         const SizedBox(height: 6),
                         TextFormField(
                           controller: _emailController,
                           keyboardType: TextInputType.emailAddress,
                           decoration: InputDecoration(
                             hintText: 'Digite seu email',
-                            prefixIcon: const Icon(Icons.email_outlined, color: Colors.grey),
+                            prefixIcon: const Icon(
+                              Icons.email_outlined,
+                              color: Colors.grey,
+                            ),
                             filled: true,
                             fillColor: const Color(0xFFF5F5F5),
                             border: OutlineInputBorder(
@@ -169,11 +184,15 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(color: Color(0xFF1B7A3E), width: 1.5),
+                              borderSide: const BorderSide(
+                                color: Color(0xFF1B7A3E),
+                                width: 1.5,
+                              ),
                             ),
                           ),
                           validator: (value) {
-                            if (value == null || value.isEmpty) return 'Informe o email';
+                            if (value == null || value.isEmpty)
+                              return 'Informe o email';
                             if (!value.contains('@')) return 'Email inválido';
                             return null;
                           },
@@ -181,20 +200,33 @@ class _LoginScreenState extends State<LoginScreen> {
                         const SizedBox(height: 16),
 
                         // Campo Senha
-                        const Text('Senha', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                        const Text(
+                          'Senha',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                        ),
                         const SizedBox(height: 6),
                         TextFormField(
                           controller: _senhaController,
                           obscureText: !_senhaVisivel,
                           decoration: InputDecoration(
                             hintText: 'Digite sua senha',
-                            prefixIcon: const Icon(Icons.lock_outline, color: Colors.grey),
+                            prefixIcon: const Icon(
+                              Icons.lock_outline,
+                              color: Colors.grey,
+                            ),
                             suffixIcon: IconButton(
                               icon: Icon(
-                                _senhaVisivel ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                                _senhaVisivel
+                                    ? Icons.visibility_off_outlined
+                                    : Icons.visibility_outlined,
                                 color: Colors.grey,
                               ),
-                              onPressed: () => setState(() => _senhaVisivel = !_senhaVisivel),
+                              onPressed: () => setState(
+                                () => _senhaVisivel = !_senhaVisivel,
+                              ),
                             ),
                             filled: true,
                             fillColor: const Color(0xFFF5F5F5),
@@ -204,11 +236,15 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(color: Color(0xFF1B7A3E), width: 1.5),
+                              borderSide: const BorderSide(
+                                color: Color(0xFF1B7A3E),
+                                width: 1.5,
+                              ),
                             ),
                           ),
                           validator: (value) {
-                            if (value == null || value.isEmpty) return 'Informe a senha';
+                            if (value == null || value.isEmpty)
+                              return 'Informe a senha';
                             if (value.length < 6) return 'Mínimo 6 caracteres';
                             return null;
                           },
@@ -221,7 +257,10 @@ class _LoginScreenState extends State<LoginScreen> {
                             onPressed: () {},
                             child: const Text(
                               'Esqueceu sua senha?',
-                              style: TextStyle(color: Color(0xFF1B7A3E), fontSize: 13),
+                              style: TextStyle(
+                                color: Color(0xFF1B7A3E),
+                                fontSize: 13,
+                              ),
                             ),
                           ),
                         ),
@@ -242,7 +281,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               elevation: 0,
                             ),
                             child: _carregando
-                                ? const CircularProgressIndicator(color: Colors.white)
+                                ? const CircularProgressIndicator(
+                                    color: Colors.white,
+                                  )
                                 : const Text(
                                     'Entrar',
                                     style: TextStyle(
@@ -255,7 +296,12 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
 
                         const SizedBox(height: 12),
-                        const Center(child: Text('ou', style: TextStyle(color: Colors.grey))),
+                        const Center(
+                          child: Text(
+                            'ou',
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                        ),
                         const SizedBox(height: 12),
 
                         // Botão Biometria
@@ -264,7 +310,10 @@ class _LoginScreenState extends State<LoginScreen> {
                           height: 52,
                           child: OutlinedButton.icon(
                             onPressed: null,
-                            icon: const Icon(Icons.fingerprint, color: Color(0xFF1B7A3E)),
+                            icon: const Icon(
+                              Icons.fingerprint,
+                              color: Color(0xFF1B7A3E),
+                            ),
                             label: const Text(
                               'Entrar com biometria',
                               style: TextStyle(
@@ -282,6 +331,27 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
 
                         const SizedBox(height: 16),
+
+                        // Não tem conta
+                        Center(
+                          child: TextButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const CadastroScreen(),
+                                ),
+                              );
+                            },
+                            child: const Text(
+                              'Não tem uma conta? Crie uma aqui',
+                              style: TextStyle(
+                                color: Color(0xFF1B7A3E),
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ),

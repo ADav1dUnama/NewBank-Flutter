@@ -1,10 +1,32 @@
 import 'package:flutter/material.dart';
 import 'package:newbank/database/app_database.dart';
+import 'package:newbank/models/tipo_conta.dart';
+import 'package:newbank/models/usuario.dart';
+import 'package:newbank/repositories/usuario_repository.dart';
 import 'login_screen.dart';
+
+Future<void> _seedDatabase() async {
+  final repo = UsuarioRepository();
+  final admin = await repo.findByEmail('admin@banco.com.br');
+  if (admin == null) {
+    await repo.insert(
+      Usuario(
+        email: 'admin@banco.com.br',
+        senha: '',
+        nomeCompleto: 'Administrador Sistema',
+        saldo: 1500.0,
+        tipoConta: TipoConta.corrente,
+        dataCriacao: DateTime.now(),
+      ),
+      plainPassword: '123',
+    );
+  }
+}
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await AppDatabase.instance.database;
+  await _seedDatabase();
   runApp(const MyApp());
 }
 

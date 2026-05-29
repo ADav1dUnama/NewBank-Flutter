@@ -1,27 +1,60 @@
 import 'package:newbank/database/app_database.dart';
 import 'package:newbank/database/database_constants.dart';
 import 'package:newbank/models/transacao.dart';
+import 'package:newbank/models/tipo_transacao.dart';
+
 class TransacaoRepository {
   TransacaoRepository({AppDatabase? database})
-      : _database = database ?? AppDatabase.instance;
+    : _database = database ?? AppDatabase.instance;
 
   final AppDatabase _database;
 
   Future<int> insert(Transacao transacao) async {
-    final db = await _database.database;
-    final userExists = await db.query(
-      DatabaseConstants.tableUsuarios,
-      columns: [DatabaseConstants.colId],
-      where: '${DatabaseConstants.colId} = ?',
-      whereArgs: [transacao.usuarioId],
-      limit: 1,
-    );
-    if (userExists.isEmpty) {
-      throw TransacaoUsuarioNotFoundException(transacao.usuarioId);
+    if (transacao.valor <= 0 && transacao.tipo != TipoTransacao.consulta) {
+      throw ArgumentError('O valor da transação deve ser maior que zero.');
     }
 
-    final data = transacao.toMap()..remove('id');
-    return db.insert(DatabaseConstants.tableTransacoes, data);
+    final db = await _database.database;
+
+    return db.transaction((txn) async {
+      final userRows = await txn.query(
+        DatabaseConstants.tableUsuarios,
+        columns: [DatabaseConstants.colId, DatabaseConstants.colSaldo],
+        where: '${DatabaseConstants.colId} = ?',
+        whereArgs: [transacao.usuarioId],
+        limit: 1,
+      );
+
+      if (userRows.isEmpty) {
+        throw TransacaoUsuarioNotFoundException(transacao.usuarioId);
+      }
+
+      final double saldoAtual =
+          (userRows.first[DatabaseConstants.colSaldo] as num).toDouble();
+      double novoSaldo = saldoAtual;
+
+      if (transacao.tipo == TipoTransacao.deposito) {
+        novoSaldo += transacao.valor;
+      } else if (transacao.tipo == TipoTransacao.saque ||
+          transacao.tipo == TipoTransacao.transferencia) {
+        if (saldoAtual < transacao.valor) {
+          throw Exception('Saldo insuficiente');
+        }
+        novoSaldo -= transacao.valor;
+      }
+
+      if (transacao.tipo != TipoTransacao.consulta) {
+        await txn.update(
+          DatabaseConstants.tableUsuarios,
+          {DatabaseConstants.colSaldo: novoSaldo},
+          where: '${DatabaseConstants.colId} = ?',
+          whereArgs: [transacao.usuarioId],
+        );
+      }
+
+      final data = transacao.toMap()..remove('id');
+      return await txn.insert(DatabaseConstants.tableTransacoes, data);
+    });
   }
 
   Future<Transacao?> findById(int id) async {

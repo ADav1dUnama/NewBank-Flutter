@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:newbank/models/usuario.dart';
+import 'package:newbank/transferencia_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  const HomeScreen({super.key, required this.usuario});
+
+  final Usuario usuario;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -20,56 +24,56 @@ class _HomeScreenState extends State<HomeScreen> {
       'data': '14/05/2026',
       'valor': '+ R\$ 1.200,00',
       'positivo': true,
-      'icone': Icons.pix
+      'icone': Icons.pix,
     },
     {
       'titulo': 'Transferência enviada',
       'data': '13/05/2026',
       'valor': '- R\$ 350,00',
       'positivo': false,
-      'icone': Icons.swap_horiz_rounded
+      'icone': Icons.swap_horiz_rounded,
     },
     {
       'titulo': 'Pagamento',
       'data': '13/05/2026',
       'valor': '- R\$ 89,90',
       'positivo': false,
-      'icone': Icons.receipt_long_outlined
+      'icone': Icons.receipt_long_outlined,
     },
     {
       'titulo': 'Pix enviado',
       'data': '12/05/2026',
       'valor': '- R\$ 200,00',
       'positivo': false,
-      'icone': Icons.pix
+      'icone': Icons.pix,
     },
     {
       'titulo': 'Depósito recebido',
       'data': '10/05/2026',
       'valor': '+ R\$ 3.000,00',
       'positivo': true,
-      'icone': Icons.arrow_downward_rounded
+      'icone': Icons.arrow_downward_rounded,
     },
     {
       'titulo': 'Pagamento de conta',
       'data': '09/05/2026',
       'valor': '- R\$ 150,00',
       'positivo': false,
-      'icone': Icons.receipt_long_outlined
+      'icone': Icons.receipt_long_outlined,
     },
     {
       'titulo': 'Pix recebido',
       'data': '08/05/2026',
       'valor': '+ R\$ 500,00',
       'positivo': true,
-      'icone': Icons.pix
+      'icone': Icons.pix,
     },
     {
       'titulo': 'Transferência enviada',
       'data': '07/05/2026',
       'valor': '- R\$ 220,00',
       'positivo': false,
-      'icone': Icons.swap_horiz_rounded
+      'icone': Icons.swap_horiz_rounded,
     },
   ];
 
@@ -118,8 +122,11 @@ class _HomeScreenState extends State<HomeScreen> {
               const Icon(Icons.menu, color: Colors.white, size: 28),
               Stack(
                 children: [
-                  const Icon(Icons.notifications_outlined,
-                      color: Colors.white, size: 28),
+                  const Icon(
+                    Icons.notifications_outlined,
+                    color: Colors.white,
+                    size: 28,
+                  ),
                   Positioned(
                     right: 0,
                     top: 0,
@@ -127,13 +134,18 @@ class _HomeScreenState extends State<HomeScreen> {
                       width: 14,
                       height: 14,
                       decoration: const BoxDecoration(
-                          color: Colors.red, shape: BoxShape.circle),
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
                       child: const Center(
-                        child: Text('1',
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 9,
-                                fontWeight: FontWeight.bold)),
+                        child: Text(
+                          '1',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -142,34 +154,46 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          const Text('Olá, Cliente!',
-              style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold)),
-          const Text('Bem-vindo ao NewBank',
-              style: TextStyle(color: Colors.white70, fontSize: 14)),
+          Text(
+            'Olá, ${widget.usuario.nomeCompleto.split(' ').first}!',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const Text(
+            'Bem-vindo ao NewBank',
+            style: TextStyle(color: Colors.white70, fontSize: 14),
+          ),
           const SizedBox(height: 20),
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-                color: Colors.white, borderRadius: BorderRadius.circular(16)),
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Saldo disponível',
-                    style: TextStyle(color: Colors.black54, fontSize: 13)),
+                const Text(
+                  'Saldo disponível',
+                  style: TextStyle(color: Colors.black54, fontSize: 13),
+                ),
                 const SizedBox(height: 6),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      _saldoVisivel ? 'R\$ 1.200,00' : 'R\$ ••••••',
+                      _saldoVisivel
+                          ? 'R\$ ${widget.usuario.saldo.toStringAsFixed(2).replaceAll('.', ',')}'
+                          : 'R\$ ••••••',
                       style: const TextStyle(
-                          color: Colors.black87,
-                          fontSize: 26,
-                          fontWeight: FontWeight.bold),
+                        color: Colors.black87,
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     GestureDetector(
                       onTap: () =>
@@ -190,15 +214,19 @@ class _HomeScreenState extends State<HomeScreen> {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Conta corrente',
-                            style: TextStyle(
-                                color: Colors.black54,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500)),
+                        Text(
+                          'Conta corrente',
+                          style: TextStyle(
+                            color: Colors.black54,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                         SizedBox(height: 2),
-                        Text('1234-5 • 67890-1',
-                            style:
-                                TextStyle(color: Colors.black87, fontSize: 13)),
+                        Text(
+                          '1234-5 • 67890-1',
+                          style: TextStyle(color: Colors.black87, fontSize: 13),
+                        ),
                       ],
                     ),
                     Icon(Icons.chevron_right, color: Colors.black45),
@@ -217,13 +245,13 @@ class _HomeScreenState extends State<HomeScreen> {
       {
         'icon': Icons.swap_horiz_rounded,
         'label': 'Transferência',
-        'rota': '/transferencia_screen'
+        'rota': '/transferencia_screen',
       },
       {'icon': Icons.pix, 'label': 'Pix', 'rota': null},
       {
         'icon': Icons.bar_chart_rounded,
         'label': 'Cotação',
-        'rota': '/cotacao_screen'
+        'rota': '/cotacao_screen',
       },
       {'icon': Icons.receipt_long_outlined, 'label': 'Extrato', 'rota': null},
     ];
@@ -233,17 +261,25 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Atalhos',
-              style: TextStyle(
-                  color: Colors.black87,
-                  fontSize: 17,
-                  fontWeight: FontWeight.bold)),
+          const Text(
+            'Atalhos',
+            style: TextStyle(
+              color: Colors.black87,
+              fontSize: 17,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           const SizedBox(height: 14),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: atalhos
-                .map((a) => _buildAtalhoItem(a['icon'] as IconData,
-                    a['label'] as String, a['rota'] as String?))
+                .map(
+                  (a) => _buildAtalhoItem(
+                    a['icon'] as IconData,
+                    a['label'] as String,
+                    a['rota'] as String?,
+                  ),
+                )
                 .toList(),
           ),
         ],
@@ -253,8 +289,23 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildAtalhoItem(IconData icon, String label, String? rota) {
     return GestureDetector(
-      onTap: () {
-        if (rota != null) Navigator.pushNamed(context, rota);
+      onTap: () async {
+        if (rota == '/transferencia_screen') {
+          // Atualiza a tela se a transferência for feita pra trazer o novo saldo
+          final atualizou = await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => TransferenciaScreen(usuario: widget.usuario),
+            ),
+          );
+          if (atualizou == true) {
+            // Em um app real você daria um reload nos dados de banco aqui,
+            // mas como é State a gente poderia só mostrar temporariamente,
+            // entretanto recomendamos recarregar o usuário. Fica pra próxima refatoração
+          }
+        } else if (rota != null) {
+          Navigator.pushNamed(context, rota);
+        }
       },
       child: Column(
         children: [
@@ -266,19 +317,23 @@ class _HomeScreenState extends State<HomeScreen> {
               borderRadius: BorderRadius.circular(14),
               boxShadow: [
                 BoxShadow(
-                    color: Colors.black.withOpacity(0.07),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2)),
+                  color: Colors.black.withOpacity(0.07),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
               ],
             ),
             child: Icon(icon, color: verde, size: 28),
           ),
           const SizedBox(height: 8),
-          Text(label,
-              style: const TextStyle(
-                  color: Colors.black87,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500)),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.black87,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
         ],
       ),
     );
@@ -300,24 +355,33 @@ class _HomeScreenState extends State<HomeScreen> {
               width: 42,
               height: 42,
               decoration: BoxDecoration(
-                  color: verde.withOpacity(0.1), shape: BoxShape.circle),
-              child: const Icon(Icons.verified_user_outlined,
-                  color: verde, size: 22),
+                color: verde.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.verified_user_outlined,
+                color: verde,
+                size: 22,
+              ),
             ),
             const SizedBox(width: 14),
             const Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Seu dinheiro protegido',
-                      style: TextStyle(
-                          color: Colors.black87,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14)),
+                  Text(
+                    'Seu dinheiro protegido',
+                    style: TextStyle(
+                      color: Colors.black87,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
                   SizedBox(height: 2),
                   Text(
-                      'Suas transações são protegidas com segurança de ponta a ponta.',
-                      style: TextStyle(color: Colors.black54, fontSize: 12)),
+                    'Suas transações são protegidas com segurança de ponta a ponta.',
+                    style: TextStyle(color: Colors.black54, fontSize: 12),
+                  ),
                 ],
               ),
             ),
@@ -340,9 +404,10 @@ class _HomeScreenState extends State<HomeScreen> {
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 8,
-                offset: const Offset(0, 2)),
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
           ],
         ),
         child: Row(
@@ -360,8 +425,10 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildResumoItem(String label, String valor, bool positivo) {
     return Column(
       children: [
-        Text(label,
-            style: const TextStyle(color: Colors.black54, fontSize: 12)),
+        Text(
+          label,
+          style: const TextStyle(color: Colors.black54, fontSize: 12),
+        ),
         const SizedBox(height: 4),
         Text(
           valor,
@@ -381,11 +448,14 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Últimas movimentações',
-              style: TextStyle(
-                  color: Colors.black87,
-                  fontSize: 17,
-                  fontWeight: FontWeight.bold)),
+          const Text(
+            'Últimas movimentações',
+            style: TextStyle(
+              color: Colors.black87,
+              fontSize: 17,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           const SizedBox(height: 12),
           Container(
             decoration: BoxDecoration(
@@ -393,9 +463,10 @@ class _HomeScreenState extends State<HomeScreen> {
               borderRadius: BorderRadius.circular(14),
               boxShadow: [
                 BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2)),
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
               ],
             ),
             child: Column(
@@ -406,7 +477,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     Padding(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 14),
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
                       child: Row(
                         children: [
                           // ícone da transação
@@ -421,8 +494,9 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                             child: Icon(
                               m['icone'] as IconData,
-                              color:
-                                  m['positivo'] ? verde : Colors.red.shade300,
+                              color: m['positivo']
+                                  ? verde
+                                  : Colors.red.shade300,
                               size: 20,
                             ),
                           ),
@@ -432,15 +506,22 @@ class _HomeScreenState extends State<HomeScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(m['titulo'],
-                                    style: const TextStyle(
-                                        color: Colors.black87,
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 14)),
+                                Text(
+                                  m['titulo'],
+                                  style: const TextStyle(
+                                    color: Colors.black87,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                  ),
+                                ),
                                 const SizedBox(height: 3),
-                                Text(m['data'],
-                                    style: const TextStyle(
-                                        color: Colors.black45, fontSize: 12)),
+                                Text(
+                                  m['data'],
+                                  style: const TextStyle(
+                                    color: Colors.black45,
+                                    fontSize: 12,
+                                  ),
+                                ),
                               ],
                             ),
                           ),
@@ -474,12 +555,12 @@ class _HomeScreenState extends State<HomeScreen> {
       {
         'icon': Icons.bar_chart_rounded,
         'label': 'Cotação',
-        'rota': '/cotacao_screen'
+        'rota': '/cotacao_screen',
       },
       {
         'icon': Icons.swap_horiz_rounded,
         'label': 'Transferência',
-        'rota': '/transferencia_screen'
+        'rota': '/transferencia_screen',
       },
       {'icon': Icons.receipt_long_outlined, 'label': 'Extrato', 'rota': null},
     ];
@@ -489,9 +570,10 @@ class _HomeScreenState extends State<HomeScreen> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 10,
-              offset: const Offset(0, -2))
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 10,
+            offset: const Offset(0, -2),
+          ),
         ],
       ),
       child: SafeArea(
@@ -504,24 +586,43 @@ class _HomeScreenState extends State<HomeScreen> {
               final item = entry.value;
               final selected = i == _currentIndex;
               return GestureDetector(
-                onTap: () {
+                onTap: () async {
                   setState(() => _currentIndex = i);
                   final rota = item['rota'] as String?;
-                  if (rota != null) Navigator.pushNamed(context, rota);
+                  if (rota == '/transferencia_screen') {
+                    final atualizou = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            TransferenciaScreen(usuario: widget.usuario),
+                      ),
+                    );
+                    if (atualizou == true) {
+                      // refresh se necessário
+                    }
+                  } else if (rota != null) {
+                    Navigator.pushNamed(context, rota);
+                  }
                 },
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(item['icon'] as IconData,
-                        color: selected ? verde : Colors.black38, size: 26),
+                    Icon(
+                      item['icon'] as IconData,
+                      color: selected ? verde : Colors.black38,
+                      size: 26,
+                    ),
                     const SizedBox(height: 4),
-                    Text(item['label'] as String,
-                        style: TextStyle(
-                          color: selected ? verde : Colors.black38,
-                          fontSize: 11,
-                          fontWeight:
-                              selected ? FontWeight.w600 : FontWeight.normal,
-                        )),
+                    Text(
+                      item['label'] as String,
+                      style: TextStyle(
+                        color: selected ? verde : Colors.black38,
+                        fontSize: 11,
+                        fontWeight: selected
+                            ? FontWeight.w600
+                            : FontWeight.normal,
+                      ),
+                    ),
                   ],
                 ),
               );
