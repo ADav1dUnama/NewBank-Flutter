@@ -9,6 +9,8 @@ class Usuario {
     required this.saldo,
     required this.tipoConta,
     required this.dataCriacao,
+    this.agencia = '0001',
+    this.numeroConta = '',
   });
 
   final int? id;
@@ -18,6 +20,8 @@ class Usuario {
   final double saldo;
   final TipoConta tipoConta;
   final DateTime dataCriacao;
+  final String agencia;
+  final String numeroConta;
 
   factory Usuario.fromMap(Map<String, Object?> map) {
     return Usuario(
@@ -31,6 +35,8 @@ class Usuario {
         map['data_criacao'] as int,
         isUtc: true,
       ),
+      agencia: map['agencia'] as String? ?? '0001',
+      numeroConta: map['numero_conta'] as String? ?? '',
     );
   }
 
@@ -43,6 +49,8 @@ class Usuario {
       'saldo': saldo,
       'tipo_conta': tipoConta.toDb(),
       'data_criacao': dataCriacao.toUtc().millisecondsSinceEpoch,
+      'agencia': agencia,
+      'numero_conta': numeroConta,
     };
   }
 
@@ -54,6 +62,8 @@ class Usuario {
     double? saldo,
     TipoConta? tipoConta,
     DateTime? dataCriacao,
+    String? agencia,
+    String? numeroConta,
   }) {
     return Usuario(
       id: id ?? this.id,
@@ -63,12 +73,15 @@ class Usuario {
       saldo: saldo ?? this.saldo,
       tipoConta: tipoConta ?? this.tipoConta,
       dataCriacao: dataCriacao ?? this.dataCriacao,
+      agencia: agencia ?? this.agencia,
+      numeroConta: numeroConta ?? this.numeroConta,
     );
   }
 
   @override
   String toString() {
     return 'Usuario(id: $id, email: $email, nomeCompleto: $nomeCompleto, '
-        'saldo: $saldo, tipoConta: $tipoConta, dataCriacao: $dataCriacao)';
+        'saldo: $saldo, tipoConta: $tipoConta, dataCriacao: $dataCriacao, '
+        'agencia: $agencia, numeroConta: $numeroConta)';
   }
 }

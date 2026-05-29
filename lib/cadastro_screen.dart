@@ -19,6 +19,7 @@ class _CadastroScreenState extends State<CadastroScreen> {
 
   bool _carregando = false;
   bool _senhaVisivel = false;
+  TipoConta _tipoConta = TipoConta.corrente;
 
   @override
   void dispose() {
@@ -39,13 +40,13 @@ class _CadastroScreenState extends State<CadastroScreen> {
         senha: '', // Vai ser hashada no repositório
         nomeCompleto: _nomeController.text.trim(),
         saldo: 0.0, // Começa zerado
-        tipoConta: TipoConta.corrente,
+        tipoConta: _tipoConta,
         dataCriacao: DateTime.now(),
       );
 
       await _usuarioRepository.insert(
         novoUsuario,
-        plainPassword: _senhaController.text.trim(),
+        plainPassword: _senhaController.text,
       );
 
       if (!mounted) return;
@@ -157,10 +158,12 @@ class _CadastroScreenState extends State<CadastroScreen> {
                             ),
                           ),
                           validator: (value) {
-                            if (value == null || value.isEmpty)
+                            if (value == null || value.isEmpty) {
                               return 'Informe seu nome';
-                            if (value.trim().split(' ').length < 2)
+                            }
+                            if (value.trim().split(' ').length < 2) {
                               return 'Informe nome e sobrenome';
+                            }
                             return null;
                           },
                         ),
@@ -191,9 +194,13 @@ class _CadastroScreenState extends State<CadastroScreen> {
                             ),
                           ),
                           validator: (value) {
-                            if (value == null || value.isEmpty)
+                            if (value == null || value.isEmpty) {
                               return 'Informe o email';
-                            if (!value.contains('@')) return 'Email inválido';
+                            }
+                            final emailRegex = RegExp(r'^[\w.-]+@[\w.-]+\.\w{2,}$');
+                            if (!emailRegex.hasMatch(value.trim())) {
+                              return 'Email inválido';
+                            }
                             return null;
                           },
                         ),
@@ -235,9 +242,50 @@ class _CadastroScreenState extends State<CadastroScreen> {
                             ),
                           ),
                           validator: (value) {
-                            if (value == null || value.length < 6)
+                            if (value == null || value.length < 6) {
                               return 'A senha deve ter no mínimo 6 caracteres';
+                            }
                             return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+
+                        const Text(
+                          'Tipo de conta',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        DropdownButtonFormField<TipoConta>(
+                          value: _tipoConta,
+                          decoration: InputDecoration(
+                            prefixIcon: const Icon(
+                              Icons.account_balance_outlined,
+                              color: Colors.grey,
+                            ),
+                            filled: true,
+                            fillColor: const Color(0xFFF5F5F5),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
+                          items: const [
+                            DropdownMenuItem(
+                              value: TipoConta.corrente,
+                              child: Text('Conta Corrente'),
+                            ),
+                            DropdownMenuItem(
+                              value: TipoConta.poupanca,
+                              child: Text('Conta Poupança'),
+                            ),
+                          ],
+                          onChanged: (value) {
+                            if (value != null) {
+                              setState(() => _tipoConta = value);
+                            }
                           },
                         ),
                         const SizedBox(height: 32),

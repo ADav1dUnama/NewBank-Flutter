@@ -4,6 +4,7 @@ class Transacao {
   const Transacao({
     this.id,
     required this.usuarioId,
+    this.destinatarioId,
     required this.tipo,
     required this.valor,
     required this.dataHora,
@@ -12,6 +13,7 @@ class Transacao {
 
   final int? id;
   final int usuarioId;
+  final int? destinatarioId;
   final TipoTransacao tipo;
   final double valor;
   final DateTime dataHora;
@@ -21,6 +23,7 @@ class Transacao {
     return Transacao(
       id: map['id'] as int?,
       usuarioId: map['usuario_id'] as int,
+      destinatarioId: map['destinatario_id'] as int?,
       tipo: TipoTransacao.fromDb(map['tipo'] as String),
       valor: (map['valor'] as num).toDouble(),
       dataHora: DateTime.fromMillisecondsSinceEpoch(
@@ -35,6 +38,7 @@ class Transacao {
     return {
       if (id != null) 'id': id,
       'usuario_id': usuarioId,
+      'destinatario_id': destinatarioId,
       'tipo': tipo.toDb(),
       'valor': valor,
       'data_hora': dataHora.toUtc().millisecondsSinceEpoch,
@@ -45,6 +49,7 @@ class Transacao {
   Transacao copyWith({
     int? id,
     int? usuarioId,
+    int? destinatarioId,
     TipoTransacao? tipo,
     double? valor,
     DateTime? dataHora,
@@ -53,6 +58,7 @@ class Transacao {
     return Transacao(
       id: id ?? this.id,
       usuarioId: usuarioId ?? this.usuarioId,
+      destinatarioId: destinatarioId ?? this.destinatarioId,
       tipo: tipo ?? this.tipo,
       valor: valor ?? this.valor,
       dataHora: dataHora ?? this.dataHora,
@@ -62,7 +68,8 @@ class Transacao {
 
   @override
   String toString() {
-    return 'Transacao(id: $id, usuarioId: $usuarioId, tipo: $tipo, '
+    return 'Transacao(id: $id, usuarioId: $usuarioId, '
+        'destinatarioId: $destinatarioId, tipo: $tipo, '
         'valor: $valor, dataHora: $dataHora, descricao: $descricao)';
   }
 }

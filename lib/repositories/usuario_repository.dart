@@ -18,12 +18,25 @@ class UsuarioRepository {
     final db = await _database.database;
     final data = usuario.toMap()
       ..remove('id')
+      ..remove(DatabaseConstants.colNumeroConta)
       ..[DatabaseConstants.colSenha] = _passwordService.hash(plainPassword)
       ..[DatabaseConstants.colDataCriacao] =
           usuario.dataCriacao.toUtc().millisecondsSinceEpoch;
 
     try {
-      return await db.insert(DatabaseConstants.tableUsuarios, data);
+      final id = await db.insert(DatabaseConstants.tableUsuarios, data);
+
+      // Generate unique account number based on the inserted ID
+      final numeroConta =
+          '${id.toString().padLeft(5, '0')}-${id % 10}';
+      await db.update(
+        DatabaseConstants.tableUsuarios,
+        {DatabaseConstants.colNumeroConta: numeroConta},
+        where: '${DatabaseConstants.colId} = ?',
+        whereArgs: [id],
+      );
+
+      return id;
     } on DatabaseException catch (e) {
       if (e.isUniqueConstraintError()) {
         throw UsuarioDuplicateEmailException(usuario.email);
@@ -69,7 +82,9 @@ class UsuarioRepository {
     final data = usuario.toMap()
       ..remove('id')
       ..remove(DatabaseConstants.colSenha)
-      ..remove(DatabaseConstants.colDataCriacao);
+      ..remove(DatabaseConstants.colDataCriacao)
+      ..remove(DatabaseConstants.colNumeroConta)
+      ..remove(DatabaseConstants.colAgencia);
 
     return db.update(
       DatabaseConstants.tableUsuarios,
@@ -84,16 +99,6 @@ class UsuarioRepository {
     return db.update(
       DatabaseConstants.tableUsuarios,
       {DatabaseConstants.colSenha: _passwordService.hash(plainPassword)},
-      where: '${DatabaseConstants.colId} = ?',
-      whereArgs: [id],
-    );
-  }
-
-  Future<int> updateSaldo(int id, double saldo) async {
-    final db = await _database.database;
-    return db.update(
-      DatabaseConstants.tableUsuarios,
-      {DatabaseConstants.colSaldo: saldo},
       where: '${DatabaseConstants.colId} = ?',
       whereArgs: [id],
     );

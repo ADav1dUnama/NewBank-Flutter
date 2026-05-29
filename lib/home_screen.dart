@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:newbank/models/tipo_conta.dart';
+import 'package:newbank/models/transacao.dart';
+import 'package:newbank/models/tipo_transacao.dart';
 import 'package:newbank/models/usuario.dart';
+import 'package:newbank/repositories/transacao_repository.dart';
+import 'package:newbank/repositories/usuario_repository.dart';
+import 'package:newbank/services/currency_formatter.dart';
 import 'package:newbank/transferencia_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -15,67 +21,61 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
   bool _saldoVisivel = true;
 
+  late Usuario _usuario;
+  List<Transacao> _transacoes = [];
+  double _totalEntradas = 0;
+  double _totalSaidas = 0;
+
+  final _usuarioRepo = UsuarioRepository();
+  final _transacaoRepo = TransacaoRepository();
+
   static const Color verde = Color(0xFF1B8C3E);
   static const Color verdeBackground = Color(0xFFEAF7EE);
 
-  final List<Map<String, dynamic>> movimentacoes = [
-    {
-      'titulo': 'Pix recebido',
-      'data': '14/05/2026',
-      'valor': '+ R\$ 1.200,00',
-      'positivo': true,
-      'icone': Icons.pix,
-    },
-    {
-      'titulo': 'Transferência enviada',
-      'data': '13/05/2026',
-      'valor': '- R\$ 350,00',
-      'positivo': false,
-      'icone': Icons.swap_horiz_rounded,
-    },
-    {
-      'titulo': 'Pagamento',
-      'data': '13/05/2026',
-      'valor': '- R\$ 89,90',
-      'positivo': false,
-      'icone': Icons.receipt_long_outlined,
-    },
-    {
-      'titulo': 'Pix enviado',
-      'data': '12/05/2026',
-      'valor': '- R\$ 200,00',
-      'positivo': false,
-      'icone': Icons.pix,
-    },
-    {
-      'titulo': 'Depósito recebido',
-      'data': '10/05/2026',
-      'valor': '+ R\$ 3.000,00',
-      'positivo': true,
-      'icone': Icons.arrow_downward_rounded,
-    },
-    {
-      'titulo': 'Pagamento de conta',
-      'data': '09/05/2026',
-      'valor': '- R\$ 150,00',
-      'positivo': false,
-      'icone': Icons.receipt_long_outlined,
-    },
-    {
-      'titulo': 'Pix recebido',
-      'data': '08/05/2026',
-      'valor': '+ R\$ 500,00',
-      'positivo': true,
-      'icone': Icons.pix,
-    },
-    {
-      'titulo': 'Transferência enviada',
-      'data': '07/05/2026',
-      'valor': '- R\$ 220,00',
-      'positivo': false,
-      'icone': Icons.swap_horiz_rounded,
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _usuario = widget.usuario;
+    _carregarDados();
+  }
+
+  Future<void> _carregarDados() async {
+    if (_usuario.id == null) return;
+
+    final usuario = await _usuarioRepo.findById(_usuario.id!);
+    final transacoes = await _transacaoRepo.findByUsuarioId(_usuario.id!);
+    final resumo = await _transacaoRepo.calcularResumo(_usuario.id!);
+
+    if (!mounted) return;
+    setState(() {
+      if (usuario != null) _usuario = usuario;
+      _transacoes = transacoes;
+      _totalEntradas = resumo['entradas'] ?? 0;
+      _totalSaidas = resumo['saidas'] ?? 0;
+    });
+  }
+
+  Future<void> _navegarTransferencia() async {
+    final atualizou = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => TransferenciaScreen(usuario: _usuario),
+      ),
+    );
+    if (atualizou == true) {
+      await _carregarDados();
+    }
+  }
+
+  void _mostrarEmBreve() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Funcionalidade em breve!'),
+        behavior: SnackBarBehavior.floating,
+        duration: Duration(seconds: 1),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -110,6 +110,13 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildHeader() {
+    final tipoConta = _usuario.tipoConta == TipoConta.corrente
+        ? 'Conta corrente'
+        : 'Conta poupança';
+    final numeroConta = _usuario.numeroConta.isNotEmpty
+        ? '${_usuario.agencia} • ${_usuario.numeroConta}'
+        : _usuario.agencia;
+
     return Container(
       color: verde,
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
@@ -155,7 +162,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            'Olá, ${widget.usuario.nomeCompleto.split(' ').first}!',
+            'Olá, ${_usuario.nomeCompleto.split(' ').first}!',
             style: const TextStyle(
               color: Colors.white,
               fontSize: 22,
@@ -187,7 +194,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     Text(
                       _saldoVisivel
-                          ? 'R\$ ${widget.usuario.saldo.toStringAsFixed(2).replaceAll('.', ',')}'
+                          ? CurrencyFormatter.format(_usuario.saldo)
                           : 'R\$ ••••••',
                       style: const TextStyle(
                         color: Colors.black87,
@@ -208,28 +215,31 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
                 const Divider(height: 24),
-                const Row(
+                Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Conta corrente',
-                          style: TextStyle(
+                          tipoConta,
+                          style: const TextStyle(
                             color: Colors.black54,
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
-                        SizedBox(height: 2),
+                        const SizedBox(height: 2),
                         Text(
-                          '1234-5 • 67890-1',
-                          style: TextStyle(color: Colors.black87, fontSize: 13),
+                          numeroConta,
+                          style: const TextStyle(
+                            color: Colors.black87,
+                            fontSize: 13,
+                          ),
                         ),
                       ],
                     ),
-                    Icon(Icons.chevron_right, color: Colors.black45),
+                    const Icon(Icons.chevron_right, color: Colors.black45),
                   ],
                 ),
               ],
@@ -241,21 +251,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildAtalhos() {
-    final atalhos = [
-      {
-        'icon': Icons.swap_horiz_rounded,
-        'label': 'Transferência',
-        'rota': '/transferencia_screen',
-      },
-      {'icon': Icons.pix, 'label': 'Pix', 'rota': null},
-      {
-        'icon': Icons.bar_chart_rounded,
-        'label': 'Cotação',
-        'rota': '/cotacao_screen',
-      },
-      {'icon': Icons.receipt_long_outlined, 'label': 'Extrato', 'rota': null},
-    ];
-
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
@@ -272,41 +267,37 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 14),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: atalhos
-                .map(
-                  (a) => _buildAtalhoItem(
-                    a['icon'] as IconData,
-                    a['label'] as String,
-                    a['rota'] as String?,
-                  ),
-                )
-                .toList(),
+            children: [
+              _buildAtalhoItem(
+                Icons.swap_horiz_rounded,
+                'Transferência',
+                _navegarTransferencia,
+              ),
+              _buildAtalhoItem(Icons.pix, 'Pix', _mostrarEmBreve),
+              _buildAtalhoItem(
+                Icons.bar_chart_rounded,
+                'Cotação',
+                _mostrarEmBreve,
+              ),
+              _buildAtalhoItem(
+                Icons.receipt_long_outlined,
+                'Extrato',
+                _mostrarEmBreve,
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  Widget _buildAtalhoItem(IconData icon, String label, String? rota) {
+  Widget _buildAtalhoItem(
+    IconData icon,
+    String label,
+    VoidCallback onTap,
+  ) {
     return GestureDetector(
-      onTap: () async {
-        if (rota == '/transferencia_screen') {
-          // Atualiza a tela se a transferência for feita pra trazer o novo saldo
-          final atualizou = await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => TransferenciaScreen(usuario: widget.usuario),
-            ),
-          );
-          if (atualizou == true) {
-            // Em um app real você daria um reload nos dados de banco aqui,
-            // mas como é State a gente poderia só mostrar temporariamente,
-            // entretanto recomendamos recarregar o usuário. Fica pra próxima refatoração
-          }
-        } else if (rota != null) {
-          Navigator.pushNamed(context, rota);
-        }
-      },
+      onTap: onTap,
       child: Column(
         children: [
           Container(
@@ -392,7 +383,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Resumo de entradas e saídas
+  // Resumo de entradas e saídas — dados reais do banco
   Widget _buildResumo() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -413,9 +404,17 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            _buildResumoItem('Entradas', '+ R\$ 4.700,00', true),
+            _buildResumoItem(
+              'Entradas',
+              '+ ${CurrencyFormatter.format(_totalEntradas)}',
+              true,
+            ),
             Container(width: 1, height: 40, color: Colors.grey.shade200),
-            _buildResumoItem('Saídas', '- R\$ 1.009,90', false),
+            _buildResumoItem(
+              'Saídas',
+              '- ${CurrencyFormatter.format(_totalSaidas)}',
+              false,
+            ),
           ],
         ),
       ),
@@ -442,6 +441,38 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  IconData _iconeParaTipo(TipoTransacao tipo) {
+    switch (tipo) {
+      case TipoTransacao.transferencia:
+        return Icons.swap_horiz_rounded;
+      case TipoTransacao.deposito:
+        return Icons.arrow_downward_rounded;
+      case TipoTransacao.saque:
+        return Icons.arrow_upward_rounded;
+    }
+  }
+
+  String _labelParaTipo(TipoTransacao tipo) {
+    switch (tipo) {
+      case TipoTransacao.transferencia:
+        return 'Transferência';
+      case TipoTransacao.deposito:
+        return 'Depósito';
+      case TipoTransacao.saque:
+        return 'Saque';
+    }
+  }
+
+  /// Determina se a transação é positiva (entrada) para o usuário atual.
+  bool _isEntrada(Transacao t) {
+    if (t.tipo == TipoTransacao.deposito) return true;
+    if (t.tipo == TipoTransacao.transferencia &&
+        t.destinatarioId == _usuario.id) {
+      return true;
+    }
+    return false;
+  }
+
   Widget _buildMovimentacoes() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -457,93 +488,128 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Column(
-              children: movimentacoes.asMap().entries.map((entry) {
-                final i = entry.key;
-                final m = entry.value;
-                return Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 14,
-                      ),
-                      child: Row(
-                        children: [
-                          // ícone da transação
-                          Container(
-                            width: 42,
-                            height: 42,
-                            decoration: BoxDecoration(
-                              color: m['positivo']
-                                  ? verde.withOpacity(0.1)
-                                  : Colors.red.withOpacity(0.08),
-                              shape: BoxShape.circle,
+          if (_transacoes.isEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(32),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: const Column(
+                children: [
+                  Icon(Icons.inbox_outlined, color: Colors.black26, size: 48),
+                  SizedBox(height: 8),
+                  Text(
+                    'Nenhuma movimentação ainda',
+                    style: TextStyle(color: Colors.black45, fontSize: 14),
+                  ),
+                ],
+              ),
+            )
+          else
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: _transacoes.asMap().entries.map((entry) {
+                  final i = entry.key;
+                  final t = entry.value;
+                  final positivo = _isEntrada(t);
+                  final icone = _iconeParaTipo(t.tipo);
+                  final titulo = _labelParaTipo(t.tipo);
+                  final dataStr =
+                      '${t.dataHora.toLocal().day.toString().padLeft(2, '0')}/'
+                      '${t.dataHora.toLocal().month.toString().padLeft(2, '0')}/'
+                      '${t.dataHora.toLocal().year}';
+                  final valorStr = positivo
+                      ? '+ ${CurrencyFormatter.format(t.valor)}'
+                      : '- ${CurrencyFormatter.format(t.valor)}';
+
+                  return Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 42,
+                              height: 42,
+                              decoration: BoxDecoration(
+                                color: positivo
+                                    ? verde.withOpacity(0.1)
+                                    : Colors.red.withOpacity(0.08),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                icone,
+                                color: positivo
+                                    ? verde
+                                    : Colors.red.shade300,
+                                size: 20,
+                              ),
                             ),
-                            child: Icon(
-                              m['icone'] as IconData,
-                              color: m['positivo']
-                                  ? verde
-                                  : Colors.red.shade300,
-                              size: 20,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          // título e data
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  m['titulo'],
-                                  style: const TextStyle(
-                                    color: Colors.black87,
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 14,
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    titulo,
+                                    style: const TextStyle(
+                                      color: Colors.black87,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 3),
-                                Text(
-                                  m['data'],
-                                  style: const TextStyle(
-                                    color: Colors.black45,
-                                    fontSize: 12,
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    dataStr,
+                                    style: const TextStyle(
+                                      color: Colors.black45,
+                                      fontSize: 12,
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                          ),
-                          // valor
-                          Text(
-                            m['valor'],
-                            style: TextStyle(
-                              color: m['positivo'] ? verde : Colors.black87,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
+                            Text(
+                              valorStr,
+                              style: TextStyle(
+                                color: positivo ? verde : Colors.black87,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                    if (i < movimentacoes.length - 1)
-                      const Divider(height: 1, indent: 16, endIndent: 16),
-                  ],
-                );
-              }).toList(),
+                      if (i < _transacoes.length - 1)
+                        const Divider(height: 1, indent: 16, endIndent: 16),
+                    ],
+                  );
+                }).toList(),
+              ),
             ),
-          ),
         ],
       ),
     );
@@ -551,18 +617,18 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildBottomNav() {
     final items = [
-      {'icon': Icons.home_rounded, 'label': 'Início', 'rota': null},
-      {
-        'icon': Icons.bar_chart_rounded,
-        'label': 'Cotação',
-        'rota': '/cotacao_screen',
-      },
+      {'icon': Icons.home_rounded, 'label': 'Início', 'action': 'home'},
+      {'icon': Icons.bar_chart_rounded, 'label': 'Cotação', 'action': 'soon'},
       {
         'icon': Icons.swap_horiz_rounded,
         'label': 'Transferência',
-        'rota': '/transferencia_screen',
+        'action': 'transfer',
       },
-      {'icon': Icons.receipt_long_outlined, 'label': 'Extrato', 'rota': null},
+      {
+        'icon': Icons.receipt_long_outlined,
+        'label': 'Extrato',
+        'action': 'soon',
+      },
     ];
 
     return Container(
@@ -588,20 +654,11 @@ class _HomeScreenState extends State<HomeScreen> {
               return GestureDetector(
                 onTap: () async {
                   setState(() => _currentIndex = i);
-                  final rota = item['rota'] as String?;
-                  if (rota == '/transferencia_screen') {
-                    final atualizou = await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            TransferenciaScreen(usuario: widget.usuario),
-                      ),
-                    );
-                    if (atualizou == true) {
-                      // refresh se necessário
-                    }
-                  } else if (rota != null) {
-                    Navigator.pushNamed(context, rota);
+                  final action = item['action'] as String;
+                  if (action == 'transfer') {
+                    await _navegarTransferencia();
+                  } else if (action == 'soon') {
+                    _mostrarEmBreve();
                   }
                 },
                 child: Column(

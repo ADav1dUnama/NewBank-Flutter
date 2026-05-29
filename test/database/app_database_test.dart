@@ -8,6 +8,7 @@ import 'package:newbank/models/usuario.dart';
 import 'package:newbank/repositories/transacao_repository.dart';
 import 'package:newbank/repositories/usuario_repository.dart';
 import 'package:newbank/services/password_service.dart';
+import 'package:newbank/services/validators.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 void main() {
@@ -32,6 +33,8 @@ void main() {
     await appDatabase.close();
   });
 
+  // ─── Schema Tests ───
+
   test('creates usuarios and transacoes tables on first open', () async {
     final db = await appDatabase.database;
     final tables = await db.rawQuery(
@@ -42,6 +45,8 @@ void main() {
     expect(names, contains(DatabaseConstants.tableUsuarios));
     expect(names, contains(DatabaseConstants.tableTransacoes));
   });
+
+  // ─── Usuario Tests ───
 
   test('inserts usuario and reads by id and email', () async {
     final usuario = _sampleUsuario();
@@ -61,6 +66,19 @@ void main() {
     expect(passwordService.verify('secret123', byId.senha), isTrue);
   });
 
+  test('inserts usuario with generated agencia and numero_conta', () async {
+    final id = await usuarioRepository.insert(
+      _sampleUsuario(),
+      plainPassword: 'secret123',
+    );
+
+    final usuario = await usuarioRepository.findById(id);
+    expect(usuario, isNotNull);
+    expect(usuario!.agencia, '0001');
+    expect(usuario.numeroConta, isNotEmpty);
+    expect(usuario.numeroConta, contains('-'));
+  });
+
   test('rejects duplicate email', () async {
     final usuario = _sampleUsuario();
     await usuarioRepository.insert(usuario, plainPassword: 'secret123');
@@ -71,47 +89,163 @@ void main() {
     );
   });
 
-  test('inserts transacao linked to usuario', () async {
-    final usuarioId = await usuarioRepository.insert(
+  test('verifyPassword validates hashed password', () async {
+    const plainPassword = 'my-secure-password';
+    final id = await usuarioRepository.insert(
       _sampleUsuario(),
-      plainPassword: 'secret123',
+      plainPassword: plainPassword,
     );
+    final usuario = await usuarioRepository.findById(id);
 
-    final transacaoId = await transacaoRepository.insert(
-      Transacao(
-        usuarioId: usuarioId,
-        tipo: TipoTransacao.transferencia,
-        valor: 150.0,
-        dataHora: DateTime.utc(2026, 5, 26, 12),
-        descricao: 'Transferência teste',
-      ),
-    );
-
-    final saved = await transacaoRepository.findById(transacaoId);
-    expect(saved, isNotNull);
-    expect(saved!.usuarioId, usuarioId);
-    expect(saved.tipo, TipoTransacao.transferencia);
+    expect(usuario, isNotNull);
+    expect(usuario!.senha, isNot(plainPassword));
+    expect(usuarioRepository.verifyPassword(usuario, plainPassword), isTrue);
+    expect(usuarioRepository.verifyPassword(usuario, 'wrong'), isFalse);
   });
 
-  test('deleting usuario cascades transacoes', () async {
-    final usuarioId = await usuarioRepository.insert(
-      _sampleUsuario(),
+  // ─── Transacao Tests ───
+
+  test('deposito increases user saldo', () async {
+    final userId = await usuarioRepository.insert(
+      _sampleUsuario(saldo: 100),
       plainPassword: 'secret123',
     );
 
     await transacaoRepository.insert(
       Transacao(
-        usuarioId: usuarioId,
-        tipo: TipoTransacao.consulta,
-        valor: 0,
-        dataHora: DateTime.utc(2026, 5, 26, 10),
+        usuarioId: userId,
+        tipo: TipoTransacao.deposito,
+        valor: 250,
+        dataHora: DateTime.utc(2026, 5, 26, 12),
       ),
     );
 
-    await usuarioRepository.delete(usuarioId);
+    final updated = await usuarioRepository.findById(userId);
+    expect(updated!.saldo, 350);
+  });
 
-    final transacoes = await transacaoRepository.findByUsuarioId(usuarioId);
-    expect(transacoes, isEmpty);
+  test('saque decreases user saldo', () async {
+    final userId = await usuarioRepository.insert(
+      _sampleUsuario(saldo: 500),
+      plainPassword: 'secret123',
+    );
+
+    await transacaoRepository.insert(
+      Transacao(
+        usuarioId: userId,
+        tipo: TipoTransacao.saque,
+        valor: 200,
+        dataHora: DateTime.utc(2026, 5, 26, 12),
+      ),
+    );
+
+    final updated = await usuarioRepository.findById(userId);
+    expect(updated!.saldo, 300);
+  });
+
+  test('saque rejects when saldo insuficiente', () async {
+    final userId = await usuarioRepository.insert(
+      _sampleUsuario(saldo: 50),
+      plainPassword: 'secret123',
+    );
+
+    expect(
+      () => transacaoRepository.insert(
+        Transacao(
+          usuarioId: userId,
+          tipo: TipoTransacao.saque,
+          valor: 100,
+          dataHora: DateTime.utc(2026, 5, 26, 12),
+        ),
+      ),
+      throwsA(isA<SaldoInsuficienteException>()),
+    );
+  });
+
+  test('transferencia debits sender and credits recipient', () async {
+    final senderId = await usuarioRepository.insert(
+      _sampleUsuario(saldo: 1000),
+      plainPassword: 'secret123',
+    );
+    final recipientId = await usuarioRepository.insert(
+      _sampleUsuario2(saldo: 200),
+      plainPassword: 'secret456',
+    );
+
+    await transacaoRepository.insert(
+      Transacao(
+        usuarioId: senderId,
+        destinatarioId: recipientId,
+        tipo: TipoTransacao.transferencia,
+        valor: 300,
+        dataHora: DateTime.utc(2026, 5, 26, 14),
+        descricao: 'Transferência teste',
+      ),
+    );
+
+    final sender = await usuarioRepository.findById(senderId);
+    final recipient = await usuarioRepository.findById(recipientId);
+    expect(sender!.saldo, 700);
+    expect(recipient!.saldo, 500);
+  });
+
+  test('transferencia rejects without destinatarioId', () async {
+    final userId = await usuarioRepository.insert(
+      _sampleUsuario(saldo: 1000),
+      plainPassword: 'secret123',
+    );
+
+    expect(
+      () => transacaoRepository.insert(
+        Transacao(
+          usuarioId: userId,
+          tipo: TipoTransacao.transferencia,
+          valor: 100,
+          dataHora: DateTime.utc(2026, 5, 26, 12),
+        ),
+      ),
+      throwsA(isA<ArgumentError>()),
+    );
+  });
+
+  test('transferencia rejects self-transfer', () async {
+    final userId = await usuarioRepository.insert(
+      _sampleUsuario(saldo: 1000),
+      plainPassword: 'secret123',
+    );
+
+    expect(
+      () => transacaoRepository.insert(
+        Transacao(
+          usuarioId: userId,
+          destinatarioId: userId,
+          tipo: TipoTransacao.transferencia,
+          valor: 100,
+          dataHora: DateTime.utc(2026, 5, 26, 12),
+        ),
+      ),
+      throwsA(isA<TransacaoAutoTransferenciaException>()),
+    );
+  });
+
+  test('transferencia rejects when destinatario not found', () async {
+    final userId = await usuarioRepository.insert(
+      _sampleUsuario(saldo: 1000),
+      plainPassword: 'secret123',
+    );
+
+    expect(
+      () => transacaoRepository.insert(
+        Transacao(
+          usuarioId: userId,
+          destinatarioId: 999,
+          tipo: TipoTransacao.transferencia,
+          valor: 100,
+          dataHora: DateTime.utc(2026, 5, 26, 12),
+        ),
+      ),
+      throwsA(isA<TransacaoDestinatarioNotFoundException>()),
+    );
   });
 
   test('rejects transacao for missing usuario', () async {
@@ -128,7 +262,8 @@ void main() {
     );
   });
 
-  test('findByUsuarioId returns transacoes ordered by data_hora desc', () async {
+  test('findByUsuarioId returns transacoes ordered by data_hora desc',
+      () async {
     final usuarioId = await usuarioRepository.insert(
       _sampleUsuario(),
       plainPassword: 'secret123',
@@ -157,28 +292,162 @@ void main() {
     expect(transacoes.last.tipo, TipoTransacao.deposito);
   });
 
-  test('verifyPassword validates hashed password', () async {
-    const plainPassword = 'my-secure-password';
-    final id = await usuarioRepository.insert(
+  test('deleting usuario cascades transacoes', () async {
+    final usuarioId = await usuarioRepository.insert(
       _sampleUsuario(),
-      plainPassword: plainPassword,
+      plainPassword: 'secret123',
     );
-    final usuario = await usuarioRepository.findById(id);
 
-    expect(usuario, isNotNull);
-    expect(usuario!.senha, isNot(plainPassword));
-    expect(usuarioRepository.verifyPassword(usuario, plainPassword), isTrue);
-    expect(usuarioRepository.verifyPassword(usuario, 'wrong'), isFalse);
+    await transacaoRepository.insert(
+      Transacao(
+        usuarioId: usuarioId,
+        tipo: TipoTransacao.deposito,
+        valor: 100,
+        dataHora: DateTime.utc(2026, 5, 26, 10),
+      ),
+    );
+
+    await usuarioRepository.delete(usuarioId);
+
+    final transacoes = await transacaoRepository.findByUsuarioId(usuarioId);
+    expect(transacoes, isEmpty);
+  });
+
+  // ─── Resumo Tests ───
+
+  test('calcularResumo returns correct entradas and saidas', () async {
+    final userId = await usuarioRepository.insert(
+      _sampleUsuario(saldo: 0),
+      plainPassword: 'secret123',
+    );
+
+    // Two deposits = 300 entradas
+    await transacaoRepository.insert(
+      Transacao(
+        usuarioId: userId,
+        tipo: TipoTransacao.deposito,
+        valor: 200,
+        dataHora: DateTime.utc(2026, 5, 26, 8),
+      ),
+    );
+    await transacaoRepository.insert(
+      Transacao(
+        usuarioId: userId,
+        tipo: TipoTransacao.deposito,
+        valor: 100,
+        dataHora: DateTime.utc(2026, 5, 26, 9),
+      ),
+    );
+    // One withdrawal = 50 saidas
+    await transacaoRepository.insert(
+      Transacao(
+        usuarioId: userId,
+        tipo: TipoTransacao.saque,
+        valor: 50,
+        dataHora: DateTime.utc(2026, 5, 26, 10),
+      ),
+    );
+
+    final resumo = await transacaoRepository.calcularResumo(userId);
+    expect(resumo['entradas'], 300);
+    expect(resumo['saidas'], 50);
+  });
+
+  test('calcularResumo counts received transfers as entradas', () async {
+    final senderId = await usuarioRepository.insert(
+      _sampleUsuario(saldo: 1000),
+      plainPassword: 'secret123',
+    );
+    final recipientId = await usuarioRepository.insert(
+      _sampleUsuario2(saldo: 0),
+      plainPassword: 'secret456',
+    );
+
+    await transacaoRepository.insert(
+      Transacao(
+        usuarioId: senderId,
+        destinatarioId: recipientId,
+        tipo: TipoTransacao.transferencia,
+        valor: 400,
+        dataHora: DateTime.utc(2026, 5, 26, 12),
+      ),
+    );
+
+    // For recipient: entradas = 400 (received transfer), saidas = 0
+    final recipientResumo =
+        await transacaoRepository.calcularResumo(recipientId);
+    expect(recipientResumo['entradas'], 400);
+    expect(recipientResumo['saidas'], 0);
+
+    // For sender: entradas = 0, saidas = 400 (sent transfer)
+    final senderResumo = await transacaoRepository.calcularResumo(senderId);
+    expect(senderResumo['entradas'], 0);
+    expect(senderResumo['saidas'], 400);
+  });
+
+  // ─── Validator Tests ───
+
+  group('Validators', () {
+    test('email rejects empty', () {
+      expect(Validators.email(null), isNotNull);
+      expect(Validators.email(''), isNotNull);
+    });
+
+    test('email rejects invalid formats', () {
+      expect(Validators.email('@'), isNotNull);
+      expect(Validators.email('foo@'), isNotNull);
+      expect(Validators.email('@bar'), isNotNull);
+      expect(Validators.email('no-at-sign'), isNotNull);
+      expect(Validators.email('foo@bar'), isNotNull); // no TLD
+    });
+
+    test('email accepts valid formats', () {
+      expect(Validators.email('user@example.com'), isNull);
+      expect(Validators.email('a.b@c.de'), isNull);
+      expect(Validators.email('test123@domain.co.uk'), isNull);
+    });
+
+    test('senha rejects short passwords', () {
+      expect(Validators.senha(null), isNotNull);
+      expect(Validators.senha('12345'), isNotNull);
+    });
+
+    test('senha accepts valid passwords', () {
+      expect(Validators.senha('123456'), isNull);
+      expect(Validators.senha('my-secure-pass'), isNull);
+    });
+
+    test('nomeCompleto requires first and last name', () {
+      expect(Validators.nomeCompleto(null), isNotNull);
+      expect(Validators.nomeCompleto(''), isNotNull);
+      expect(Validators.nomeCompleto('Maria'), isNotNull);
+    });
+
+    test('nomeCompleto accepts full names', () {
+      expect(Validators.nomeCompleto('Maria Silva'), isNull);
+      expect(Validators.nomeCompleto('João Pedro Santos'), isNull);
+    });
   });
 }
 
-Usuario _sampleUsuario() {
+Usuario _sampleUsuario({double saldo = 1000}) {
   return Usuario(
     email: 'user@example.com',
     senha: '',
     nomeCompleto: 'Maria Silva',
-    saldo: 1000,
+    saldo: saldo,
     tipoConta: TipoConta.corrente,
+    dataCriacao: DateTime.utc(2026, 5, 26),
+  );
+}
+
+Usuario _sampleUsuario2({double saldo = 500}) {
+  return Usuario(
+    email: 'user2@example.com',
+    senha: '',
+    nomeCompleto: 'João Santos',
+    saldo: saldo,
+    tipoConta: TipoConta.poupanca,
     dataCriacao: DateTime.utc(2026, 5, 26),
   );
 }

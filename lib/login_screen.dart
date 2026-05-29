@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:newbank/models/usuario.dart';
 import 'package:newbank/repositories/usuario_repository.dart';
+import 'package:newbank/services/validators.dart';
 import 'cadastro_screen.dart';
 import 'home_screen.dart';
 
@@ -41,7 +42,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     final usuarioLogado = await _verificarCredenciais(
       _emailController.text.trim(),
-      _senhaController.text.trim(),
+      _senhaController.text,
     );
 
     if (!mounted) return;
@@ -190,12 +191,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ),
                           ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty)
-                              return 'Informe o email';
-                            if (!value.contains('@')) return 'Email inválido';
-                            return null;
-                          },
+                          validator: Validators.email,
                         ),
                         const SizedBox(height: 16),
 
@@ -242,12 +238,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ),
                           ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty)
-                              return 'Informe a senha';
-                            if (value.length < 6) return 'Mínimo 6 caracteres';
-                            return null;
-                          },
+                          validator: Validators.senha,
                         ),
 
                         // Esqueceu senha

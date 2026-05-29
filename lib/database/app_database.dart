@@ -28,6 +28,7 @@ class AppDatabase {
       version: DatabaseConstants.version,
       onConfigure: _onConfigure,
       onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
     );
     return _database!;
   }
@@ -39,6 +40,7 @@ class AppDatabase {
       version: DatabaseConstants.version,
       onConfigure: _onConfigure,
       onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
     );
   }
 
@@ -65,7 +67,9 @@ class AppDatabase {
         ${DatabaseConstants.colNomeCompleto} TEXT NOT NULL,
         ${DatabaseConstants.colSaldo} REAL NOT NULL DEFAULT 0,
         ${DatabaseConstants.colTipoConta} TEXT NOT NULL,
-        ${DatabaseConstants.colDataCriacao} INTEGER NOT NULL
+        ${DatabaseConstants.colDataCriacao} INTEGER NOT NULL,
+        ${DatabaseConstants.colAgencia} TEXT NOT NULL DEFAULT '0001',
+        ${DatabaseConstants.colNumeroConta} TEXT NOT NULL DEFAULT ''
       )
     ''');
 
@@ -73,13 +77,17 @@ class AppDatabase {
       CREATE TABLE ${DatabaseConstants.tableTransacoes} (
         ${DatabaseConstants.colId} INTEGER PRIMARY KEY AUTOINCREMENT,
         ${DatabaseConstants.colUsuarioId} INTEGER NOT NULL,
+        ${DatabaseConstants.colDestinatarioId} INTEGER,
         ${DatabaseConstants.colTipo} TEXT NOT NULL,
         ${DatabaseConstants.colValor} REAL NOT NULL,
         ${DatabaseConstants.colDataHora} INTEGER NOT NULL,
         ${DatabaseConstants.colDescricao} TEXT,
         FOREIGN KEY (${DatabaseConstants.colUsuarioId})
           REFERENCES ${DatabaseConstants.tableUsuarios}(${DatabaseConstants.colId})
-          ON DELETE CASCADE
+          ON DELETE CASCADE,
+        FOREIGN KEY (${DatabaseConstants.colDestinatarioId})
+          REFERENCES ${DatabaseConstants.tableUsuarios}(${DatabaseConstants.colId})
+          ON DELETE SET NULL
       )
     ''');
 
@@ -92,5 +100,32 @@ class AppDatabase {
       CREATE INDEX idx_transacoes_usuario_id
       ON ${DatabaseConstants.tableTransacoes}(${DatabaseConstants.colUsuarioId})
     ''');
+  }
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      // Add agencia and numero_conta to usuarios
+      await db.execute(
+        'ALTER TABLE ${DatabaseConstants.tableUsuarios} '
+        "ADD COLUMN ${DatabaseConstants.colAgencia} TEXT NOT NULL DEFAULT '0001'",
+      );
+      await db.execute(
+        'ALTER TABLE ${DatabaseConstants.tableUsuarios} '
+        "ADD COLUMN ${DatabaseConstants.colNumeroConta} TEXT NOT NULL DEFAULT ''",
+      );
+      // Generate unique account numbers for existing rows
+      await db.execute(
+        "UPDATE ${DatabaseConstants.tableUsuarios} "
+        "SET ${DatabaseConstants.colNumeroConta} = printf('%05d-%d', ${DatabaseConstants.colId}, ${DatabaseConstants.colId} % 10)",
+      );
+
+      // Add destinatario_id to transacoes
+      await db.execute(
+        'ALTER TABLE ${DatabaseConstants.tableTransacoes} '
+        'ADD COLUMN ${DatabaseConstants.colDestinatarioId} INTEGER '
+        'REFERENCES ${DatabaseConstants.tableUsuarios}(${DatabaseConstants.colId}) '
+        'ON DELETE SET NULL',
+      );
+    }
   }
 }

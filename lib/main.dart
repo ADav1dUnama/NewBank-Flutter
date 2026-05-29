@@ -18,7 +18,7 @@ Future<void> _seedDatabase() async {
         tipoConta: TipoConta.corrente,
         dataCriacao: DateTime.now(),
       ),
-      plainPassword: '123',
+      plainPassword: 'admin123',
     );
   }
 }
