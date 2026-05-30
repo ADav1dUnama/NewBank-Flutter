@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'routes.dart';
+import 'package:newbank/transferencia_screen.dart';
+import 'models/usuario.dart';
 
 class CotacaoScreen extends StatefulWidget {
-  const CotacaoScreen({Key? key}) : super(key: key);
+  final Usuario usuario;
+
+  const CotacaoScreen({Key? key, required this.usuario}) : super(key: key);
 
   @override
   State<CotacaoScreen> createState() => _CotacaoScreenState();
@@ -175,22 +178,34 @@ class _CotacaoScreenState extends State<CotacaoScreen> {
     });
   }
 
-  void _onBottomNavTapped(int index) {
+  void _onBottomNavTapped(int index) async {
     setState(() => _selectedIndex = index);
 
-    // Navegar para outras telas
     switch (index) {
       case 0:
-        AppRoutes.navigateToAndReplace(context, AppRoutes.home);
+        Navigator.pop(context);
         break;
+
       case 1:
-        // Já está aqui
         break;
+
       case 2:
-        AppRoutes.navigateTo(context, AppRoutes.transferencia);
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => TransferenciaScreen(
+              usuario: widget.usuario,
+            ),
+          ),
+        );
         break;
+
       case 3:
-        // Extrato - adicione a tela quando tiver
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Tela de extrato em desenvolvimento'),
+          ),
+        );
         break;
     }
   }
@@ -200,7 +215,7 @@ class _CotacaoScreenState extends State<CotacaoScreen> {
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        backgroundColor: Colors.green,
+        backgroundColor: Color(0xFF1B7A3E),
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
@@ -251,7 +266,7 @@ class _CotacaoScreenState extends State<CotacaoScreen> {
                     ],
                   ),
                   child: IconButton(
-                    icon: const Icon(Icons.swap_vert, color: Colors.green),
+                    icon: const Icon(Icons.swap_vert, color: Color(0xFF1B7A3E)),
                     onPressed: _trocarMoedas,
                   ),
                 ),
@@ -271,7 +286,7 @@ class _CotacaoScreenState extends State<CotacaoScreen> {
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _buscarCotacao,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
+                    backgroundColor: Color(0xFF1B7A3E),
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
