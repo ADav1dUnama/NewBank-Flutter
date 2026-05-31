@@ -3,6 +3,8 @@ import 'package:newbank/database/app_database.dart';
 import 'package:newbank/models/tipo_conta.dart';
 import 'package:newbank/models/usuario.dart';
 import 'package:newbank/repositories/usuario_repository.dart';
+import 'package:newbank/services/secure_storage_service.dart';
+import 'package:newbank/biometric_lock_screen.dart';
 import 'landing_page.dart';
 
 Future<void> _seedDatabase() async {
@@ -27,11 +29,16 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await AppDatabase.instance.database;
   await _seedDatabase();
-  runApp(const MyApp());
+
+  final secureStorage = SecureStorageService();
+  final lastLoggedUserId = await secureStorage.getLastLoggedUserId();
+
+  runApp(MyApp(initialUserId: lastLoggedUserId));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final int? initialUserId;
+  const MyApp({super.key, this.initialUserId});
 
   @override
   Widget build(BuildContext context) {
@@ -53,7 +60,9 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       themeMode: ThemeMode.system,
-      home: const LandingPage(),
+      home: initialUserId != null
+          ? BiometricLockScreen(userId: initialUserId!)
+          : const LandingPage(),
     );
   }
 }

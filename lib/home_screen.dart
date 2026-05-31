@@ -6,7 +6,11 @@ import 'package:newbank/models/usuario.dart';
 import 'package:newbank/repositories/transacao_repository.dart';
 import 'package:newbank/repositories/usuario_repository.dart';
 import 'package:newbank/services/currency_formatter.dart';
+import 'package:newbank/services/secure_storage_service.dart';
+import 'package:newbank/landing_page.dart';
 import 'package:newbank/transferencia_screen.dart';
+import 'package:newbank/cotacao_screen.dart';
+import 'package:newbank/extrato_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key, required this.usuario});
@@ -28,6 +32,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final _usuarioRepo = UsuarioRepository();
   final _transacaoRepo = TransacaoRepository();
+  final _secureStorage = SecureStorageService();
 
   static const Color verde = Color(0xFF1B8C3E);
   static const Color verdeBackground = Color(0xFFEAF7EE);
@@ -55,6 +60,16 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  Future<void> _fazerLogout() async {
+    await _secureStorage.clearLastLoggedUserId();
+    if (!mounted) return;
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const LandingPage()),
+      (route) => false,
+    );
+  }
+
   Future<void> _navegarTransferencia() async {
     final atualizou = await Navigator.push(
       context,
@@ -65,6 +80,24 @@ class _HomeScreenState extends State<HomeScreen> {
     if (atualizou == true) {
       await _carregarDados();
     }
+  }
+
+  Future<void> _navegarCotacao() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CotacaoScreen(usuario: _usuario),
+      ),
+    );
+  }
+
+  Future<void> _navegarExtrato() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ExtratoScreen(usuario: _usuario),
+      ),
+    );
   }
 
   void _mostrarEmBreve() {
@@ -162,9 +195,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),
             title: const Text('Sair', style: TextStyle(color: Colors.red)),
-            onTap: () {
-              Navigator.popUntil(context, (route) => route.isFirst);
-            },
+            onTap: _fazerLogout,
           ),
           const SizedBox(height: 20),
         ],
@@ -354,14 +385,14 @@ class _HomeScreenState extends State<HomeScreen> {
               _buildAtalhoItem(
                 Icons.bar_chart_rounded,
                 'Cotação',
-                _mostrarEmBreve,
+                _navegarCotacao,
                 theme,
                 isDark,
               ),
               _buildAtalhoItem(
                 Icons.receipt_long_outlined,
                 'Extrato',
-                _mostrarEmBreve,
+                _navegarExtrato,
                 theme,
                 isDark,
               ),
@@ -573,8 +604,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildMovimentacoes(ThemeData theme, bool isDark) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Column( crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'Últimas movimentações',
@@ -729,16 +759,16 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildBottomNav(ThemeData theme, bool isDark) {
     final items = [
       {'icon': Icons.home_rounded, 'label': 'Início', 'action': 'home'},
-      {'icon': Icons.bar_chart_rounded, 'label': 'Cotação', 'action': 'soon'},
+      {'icon': Icons.currency_exchange_rounded, 'label': 'Conversor', 'action': 'cotacao'},
       {
         'icon': Icons.swap_horiz_rounded,
-        'label': 'Transferência',
+        'label': 'Transferir',
         'action': 'transfer',
       },
       {
-        'icon': Icons.receipt_long_outlined,
+        'icon': Icons.receipt_long_rounded,
         'label': 'Extrato',
-        'action': 'soon',
+        'action': 'extrato',
       },
     ];
 
@@ -769,6 +799,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   final action = item['action'] as String;
                   if (action == 'transfer') {
                     await _navegarTransferencia();
+                  } else if (action == 'cotacao') {
+                    await _navegarCotacao();
+                  } else if (action == 'extrato') {
+                    await _navegarExtrato();
                   } else if (action == 'soon') {
                     _mostrarEmBreve();
                   }

@@ -6,6 +6,8 @@ import 'package:newbank/models/usuario.dart';
 import 'package:newbank/repositories/transacao_repository.dart';
 import 'package:newbank/repositories/usuario_repository.dart';
 import 'package:newbank/services/currency_formatter.dart';
+import 'package:newbank/cotacao_screen.dart';
+import 'package:newbank/extrato_screen.dart';
 
 class TransferenciaScreen extends StatefulWidget {
   const TransferenciaScreen({super.key, required this.usuario});
@@ -418,29 +420,6 @@ class _TransferenciaScreenState extends State<TransferenciaScreen> {
   }
 
   Widget _buildBottomNavBar(ThemeData theme, bool isDark) {
-    final items = [
-      _NavItem(
-        icon: Icons.home_outlined,
-        activeIcon: Icons.home,
-        label: 'Início',
-      ),
-      _NavItem(
-        icon: Icons.show_chart_outlined,
-        activeIcon: Icons.show_chart,
-        label: 'Cotação',
-      ),
-      _NavItem(
-        icon: Icons.swap_horiz_outlined,
-        activeIcon: Icons.swap_horiz,
-        label: 'Transferência',
-      ),
-      _NavItem(
-        icon: Icons.receipt_long_outlined,
-        activeIcon: Icons.receipt_long,
-        label: 'Extrato',
-      ),
-    ];
-
     return Container(
       decoration: BoxDecoration(
         color: isDark ? Colors.black : theme.colorScheme.surface,
@@ -448,7 +427,33 @@ class _TransferenciaScreenState extends State<TransferenciaScreen> {
       ),
       child: BottomNavigationBar(
         currentIndex: _currentNavIndex,
-        onTap: (i) => setState(() => _currentNavIndex = i),
+        onTap: (i) async {
+          setState(() => _currentNavIndex = i);
+          switch (i) {
+            case 0:
+              Navigator.pop(context);
+              break;
+            case 1:
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => CotacaoScreen(usuario: widget.usuario),
+                ),
+              );
+              break;
+            case 2:
+              // Já estamos na tela de transferência
+              break;
+            case 3:
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ExtratoScreen(usuario: widget.usuario),
+                ),
+              );
+              break;
+          }
+        },
         selectedItemColor: _green,
         unselectedItemColor: isDark ? Colors.white38 : _labelColor,
         selectedLabelStyle: const TextStyle(
@@ -459,26 +464,26 @@ class _TransferenciaScreenState extends State<TransferenciaScreen> {
         backgroundColor: isDark ? Colors.black : theme.colorScheme.surface,
         elevation: 0,
         type: BottomNavigationBarType.fixed,
-        items: List.generate(
-          items.length,
-          (i) => BottomNavigationBarItem(
-            icon: Icon(items[i].icon, size: 24),
-            activeIcon: Icon(items[i].activeIcon, size: 24),
-            label: items[i].label,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home_rounded, size: 24),
+            label: 'Início',
           ),
-        ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.currency_exchange_rounded, size: 24),
+            label: 'Conversor',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.swap_horiz_rounded, size: 24),
+            label: 'Transferir',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.receipt_long_rounded, size: 24),
+            label: 'Extrato',
+          ),
+        ],
       ),
     );
   }
 }
 
-class _NavItem {
-  final IconData icon;
-  final IconData activeIcon;
-  final String label;
-  const _NavItem({
-    required this.icon,
-    required this.activeIcon,
-    required this.label,
-  });
-}

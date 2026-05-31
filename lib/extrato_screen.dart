@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:newbank/transferencia_screen.dart';
 import 'package:newbank/cotacao_screen.dart';
 import 'package:newbank/models/usuario.dart';
+import 'package:newbank/models/transacao.dart';
+import 'package:newbank/repositories/transacao_repository.dart';
 
 class ExtratoScreen extends StatefulWidget {
   final Usuario usuario;
@@ -14,17 +16,49 @@ class ExtratoScreen extends StatefulWidget {
 
 class _ExtratoScreenState extends State<ExtratoScreen> {
   int _selectedIndex = 3;
+  bool _isLoading = true;
+  List<Transacao> _transacoes = [];
 
   String _filtroSelecionado = 'Todos';
   final List<String> _filtros = ['Todos', 'Entrada', 'Saída', 'Transferência'];
 
-  List<Map<String, dynamic>> get _transacoes {
-    return widget.usuario.extrato;
+  final _transacaoRepo = TransacaoRepository();
+
+  @override
+  void initState() {
+    super.initState();
+    _carregarTransacoes();
   }
 
-  List<Map<String, dynamic>> get _transacoesFiltradas {
+  Future<void> _carregarTransacoes() async {
+    setState(() => _isLoading = true);
+    try {
+      final transacoes = await _transacaoRepo.findByUsuarioId(widget.usuario.id!);
+      if (!mounted) return;
+      setState(() {
+        _transacoes = transacoes;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Erro ao carregar extrato')),
+      );
+    }
+  }
+
+  List<Transacao> get _transacoesFiltradas {
     if (_filtroSelecionado == 'Todos') return _transacoes;
-    return _transacoes.where((t) => t['tipo'] == _filtroSelecionado).toList();
+    return _transacoes.where((t) {
+      // Simplificando lógica de filtro para transações reais
+      if (_filtroSelecionado == 'Entrada') {
+        return t.destinatarioId == widget.usuario.id;
+      } else if (_filtroSelecionado == 'Saída') {
+        return t.usuarioId == widget.usuario.id && t.destinatarioId != widget.usuario.id;
+      }
+      return true;
+    }).toList();
   }
 
   void _onBottomNavTapped(int index) async {
@@ -32,7 +66,7 @@ class _ExtratoScreenState extends State<ExtratoScreen> {
 
     switch (index) {
       case 0:
-        Navigator.popUntil(context, (route) => route.isFirst);
+        Navigator.pop(context);
         break;
       case 1:
         await Navigator.push(
@@ -120,9 +154,11 @@ class _ExtratoScreenState extends State<ExtratoScreen> {
           _buildFiltros(theme, isDark),
           
           Expanded(
-            child: transacoes.isEmpty
-                ? _buildEstadoVazio(theme, isDark)
-                : _buildListaTransacoes(transacoes, theme, isDark),
+            child: _isLoading 
+                ? const Center(child: CircularProgressIndicator())
+                : transacoes.isEmpty
+                    ? _buildEstadoVazio(theme, isDark)
+                    : _buildListaTransacoes(transacoes, theme, isDark),
           ),
         ],
       ),
@@ -134,12 +170,12 @@ class _ExtratoScreenState extends State<ExtratoScreen> {
         selectedItemColor: verde,
         unselectedItemColor: isDark ? Colors.white38 : Colors.grey,
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Início'),
+          BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Início'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.currency_exchange), label: 'Conversor'),
+              icon: Icon(Icons.currency_exchange_rounded), label: 'Conversor'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.swap_horiz), label: 'Transferência'),
-          BottomNavigationBarItem(icon: Icon(Icons.receipt), label: 'Extrato'),
+              icon: Icon(Icons.swap_horiz_rounded), label: 'Transferir'),
+          BottomNavigationBarItem(icon: Icon(Icons.receipt_long_rounded), label: 'Extrato'),
         ],
       ),
     );
@@ -280,10 +316,10 @@ class _ExtratoScreenState extends State<ExtratoScreen> {
     );
   }
 
-  Widget _buildListaTransacoes(List<Map<String, dynamic>> transacoes, ThemeData theme, bool isDark) {
-    final Map<String, List<Map<String, dynamic>>> agrupadas = {};
+  Widget _buildListaTransacoes(List<Transacao> transacoes, ThemeData theme, bool isDark) {
+    final Map<String, List<Transacao>> agrupadas = {};
     for (final t in transacoes) {
-      final data = t['data'] as String;
+      final data = '${t.dataHora.day.toString().padLeft(2, '0')}/${t.dataHora.month.toString().padLeft(2, '0')}/${t.dataHora.year}';
       agrupadas.putIfAbsent(data, () => []).add(t);
     }
 
@@ -373,11 +409,14 @@ class _ExtratoScreenState extends State<ExtratoScreen> {
     );
   }
 
-  Widget _buildTransacaoItem(Map<String, dynamic> transacao, bool isLast, ThemeData theme, bool isDark) {
-    final tipo = transacao['tipo'] as String;
-    final cor = _corPorTipo(tipo);
-    final icone = _iconePorTipo(tipo);
-    final valor = (transacao['valor'] as num).toDouble();
+  Widget _buildTransacaoItem(Transacao transacao, bool isLast, ThemeData theme, bool isDark) {
+    final bool positivo = transacao.destinatarioId == widget.usuario.id;
+    final tipoStr = positivo ? 'Entrada' : 'Saída';
+    final cor = _corPorTipo(tipoStr);
+    final icone = _iconePorTipo(tipoStr);
+    final valor = transacao.valor;
+    final horaStr = '${transacao.dataHora.hour.toString().padLeft(2, '0')}:${transacao.dataHora.minute.toString().padLeft(2, '0')}';
+    final descricao = (transacao.descricao != null && transacao.descricao!.isNotEmpty) ? transacao.descricao! : (positivo ? 'Transferência recebida' : 'Transferência enviada');
 
     return Column(
       children: [
@@ -402,7 +441,7 @@ class _ExtratoScreenState extends State<ExtratoScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      transacao['descricao'] as String,
+                      descricao,
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
@@ -411,7 +450,7 @@ class _ExtratoScreenState extends State<ExtratoScreen> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      tipo,
+                      tipoStr,
                       style: TextStyle(
                         fontSize: 12,
                         color: isDark ? Colors.white38 : Colors.grey[500],
@@ -425,18 +464,18 @@ class _ExtratoScreenState extends State<ExtratoScreen> {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    _formatarValor(valor, tipo),
+                    _formatarValor(valor, tipoStr),
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
-                      color: tipo == 'Entrada'
+                      color: positivo
                           ? (isDark ? Colors.green[300] : Colors.green[700])
                           : (isDark ? Colors.red[300] : Colors.red[700]),
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    transacao['hora'] as String,
+                    horaStr,
                     style: TextStyle(fontSize: 11, color: isDark ? Colors.white24 : Colors.grey[400]),
                   ),
                 ],

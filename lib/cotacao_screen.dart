@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:newbank/transferencia_screen.dart';
-import 'models/usuario.dart';
+import 'package:newbank/extrato_screen.dart';
+import 'package:newbank/models/usuario.dart';
 
 class CotacaoScreen extends StatefulWidget {
   final Usuario usuario;
@@ -68,7 +69,10 @@ class _CotacaoScreenState extends State<CotacaoScreen> {
       return;
     }
 
-    final double? amount = double.tryParse(_amountController.text);
+    final String valorLimpo = _amountController.text
+        .replaceAll('.', '')
+        .replaceAll(',', '.');
+    final double? amount = double.tryParse(valorLimpo);
     if (amount == null || amount <= 0) {
       _mostrarErro('Digite um valor válido');
       return;
@@ -186,9 +190,12 @@ class _CotacaoScreenState extends State<CotacaoScreen> {
         break;
 
       case 3:
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Tela de extrato em desenvolvimento'),
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ExtratoScreen(
+              usuario: widget.usuario,
+            ),
           ),
         );
         break;
@@ -372,12 +379,12 @@ class _CotacaoScreenState extends State<CotacaoScreen> {
         selectedItemColor: verde,
         unselectedItemColor: isDark ? Colors.white38 : Colors.grey,
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Início'),
+          BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Início'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.currency_exchange), label: 'Conversor'),
+              icon: Icon(Icons.currency_exchange_rounded), label: 'Conversor'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.swap_horiz), label: 'Transferência'),
-          BottomNavigationBarItem(icon: Icon(Icons.receipt), label: 'Extrato'),
+              icon: Icon(Icons.swap_horiz_rounded), label: 'Transferir'),
+          BottomNavigationBarItem(icon: Icon(Icons.receipt_long_rounded), label: 'Extrato'),
         ],
       ),
     );
@@ -458,7 +465,7 @@ class _CotacaoScreenState extends State<CotacaoScreen> {
           ),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
-            initialValue: moedaSelecionada,
+            value: moedaSelecionada,
             items: _moedas.map((moeda) {
               return DropdownMenuItem(
                 value: moeda,
