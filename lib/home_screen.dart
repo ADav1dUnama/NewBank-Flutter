@@ -79,24 +79,28 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: isDark ? Colors.black : const Color(0xFFF5F5F5),
+      drawer: _buildDrawer(theme, isDark),
       body: SafeArea(
         child: Column(
           children: [
-            _buildHeader(),
+            _buildHeader(theme, isDark),
             Expanded(
               child: SingleChildScrollView(
                 child: Column(
                   children: [
                     const SizedBox(height: 16),
-                    _buildAtalhos(),
+                    _buildAtalhos(theme, isDark),
                     const SizedBox(height: 16),
-                    _buildSegurancaBanner(),
+                    _buildSegurancaBanner(theme, isDark),
                     const SizedBox(height: 24),
-                    _buildResumo(),
+                    _buildResumo(theme, isDark),
                     const SizedBox(height: 16),
-                    _buildMovimentacoes(),
+                    _buildMovimentacoes(theme, isDark),
                     const SizedBox(height: 24),
                   ],
                 ),
@@ -105,11 +109,70 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: _buildBottomNav(),
+      bottomNavigationBar: _buildBottomNav(theme, isDark),
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildDrawer(ThemeData theme, bool isDark) {
+    return Drawer(
+      backgroundColor: isDark ? Colors.black : Colors.white,
+      child: Column(
+        children: [
+          UserAccountsDrawerHeader(
+            decoration: const BoxDecoration(color: verde),
+            currentAccountPicture: CircleAvatar(
+              backgroundColor: Colors.white,
+              child: Text(
+                _usuario.nomeCompleto[0].toUpperCase(),
+                style: const TextStyle(
+                  color: verde,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            accountName: Text(
+              _usuario.nomeCompleto,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            accountEmail: Text(_usuario.email),
+          ),
+          ListTile(
+            leading: const Icon(Icons.person_outline),
+            title: const Text('Meus Dados'),
+            onTap: () => Navigator.pop(context),
+          ),
+          ListTile(
+            leading: const Icon(Icons.account_balance_wallet_outlined),
+            title: const Text('Configurações da Conta'),
+            onTap: () => Navigator.pop(context),
+          ),
+          ListTile(
+            leading: const Icon(Icons.security_outlined),
+            title: const Text('Segurança e Privacidade'),
+            onTap: () => Navigator.pop(context),
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.help_outline),
+            title: const Text('Ajuda e Suporte'),
+            onTap: () => Navigator.pop(context),
+          ),
+          const Spacer(),
+          ListTile(
+            leading: const Icon(Icons.logout, color: Colors.red),
+            title: const Text('Sair', style: TextStyle(color: Colors.red)),
+            onTap: () {
+              Navigator.popUntil(context, (route) => route.isFirst);
+            },
+          ),
+          const SizedBox(height: 20),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader(ThemeData theme, bool isDark) {
     final tipoConta = _usuario.tipoConta == TipoConta.corrente
         ? 'Conta corrente'
         : 'Conta poupança';
@@ -119,14 +182,19 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Container(
       color: verde,
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+      padding: const EdgeInsets.fromLTRB(10, 12, 20, 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Icon(Icons.menu, color: Colors.white, size: 28),
+              Builder(
+                builder: (context) => IconButton(
+                  icon: const Icon(Icons.menu, color: Colors.white, size: 28),
+                  onPressed: () => Scaffold.of(context).openDrawer(),
+                ),
+              ),
               Stack(
                 children: [
                   const Icon(
@@ -178,15 +246,19 @@ class _HomeScreenState extends State<HomeScreen> {
             width: double.infinity,
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: isDark ? Colors.black : Colors.white,
               borderRadius: BorderRadius.circular(16),
+              border: isDark ? Border.all(color: Colors.white12) : null,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Saldo disponível',
-                  style: TextStyle(color: Colors.black54, fontSize: 13),
+                  style: TextStyle(
+                    color: isDark ? Colors.white60 : Colors.black54,
+                    fontSize: 13,
+                  ),
                 ),
                 const SizedBox(height: 6),
                 Row(
@@ -196,8 +268,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       _saldoVisivel
                           ? CurrencyFormatter.format(_usuario.saldo)
                           : 'R\$ ••••••',
-                      style: const TextStyle(
-                        color: Colors.black87,
+                      style: TextStyle(
+                        color: isDark ? Colors.white : Colors.black87,
                         fontSize: 26,
                         fontWeight: FontWeight.bold,
                       ),
@@ -209,12 +281,12 @@ class _HomeScreenState extends State<HomeScreen> {
                         _saldoVisivel
                             ? Icons.visibility_outlined
                             : Icons.visibility_off_outlined,
-                        color: Colors.black45,
+                        color: isDark ? Colors.white38 : Colors.black45,
                       ),
                     ),
                   ],
                 ),
-                const Divider(height: 24),
+                Divider(height: 24, color: isDark ? Colors.white10 : null),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -223,8 +295,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       children: [
                         Text(
                           tipoConta,
-                          style: const TextStyle(
-                            color: Colors.black54,
+                          style: TextStyle(
+                            color: isDark ? Colors.white60 : Colors.black54,
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
                           ),
@@ -232,14 +304,17 @@ class _HomeScreenState extends State<HomeScreen> {
                         const SizedBox(height: 2),
                         Text(
                           numeroConta,
-                          style: const TextStyle(
-                            color: Colors.black87,
+                          style: TextStyle(
+                            color: isDark ? Colors.white : Colors.black87,
                             fontSize: 13,
                           ),
                         ),
                       ],
                     ),
-                    const Icon(Icons.chevron_right, color: Colors.black45),
+                    Icon(
+                      Icons.chevron_right,
+                      color: isDark ? Colors.white38 : Colors.black45,
+                    ),
                   ],
                 ),
               ],
@@ -250,16 +325,16 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildAtalhos() {
+  Widget _buildAtalhos(ThemeData theme, bool isDark) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Atalhos',
             style: TextStyle(
-              color: Colors.black87,
+              color: isDark ? Colors.white : Colors.black87,
               fontSize: 17,
               fontWeight: FontWeight.bold,
             ),
@@ -272,17 +347,23 @@ class _HomeScreenState extends State<HomeScreen> {
                 Icons.swap_horiz_rounded,
                 'Transferência',
                 _navegarTransferencia,
+                theme,
+                isDark,
               ),
-              _buildAtalhoItem(Icons.pix, 'Pix', _mostrarEmBreve),
+              _buildAtalhoItem(Icons.pix, 'Pix', _mostrarEmBreve, theme, isDark),
               _buildAtalhoItem(
                 Icons.bar_chart_rounded,
                 'Cotação',
                 _mostrarEmBreve,
+                theme,
+                isDark,
               ),
               _buildAtalhoItem(
                 Icons.receipt_long_outlined,
                 'Extrato',
                 _mostrarEmBreve,
+                theme,
+                isDark,
               ),
             ],
           ),
@@ -295,6 +376,8 @@ class _HomeScreenState extends State<HomeScreen> {
     IconData icon,
     String label,
     VoidCallback onTap,
+    ThemeData theme,
+    bool isDark,
   ) {
     return GestureDetector(
       onTap: onTap,
@@ -304,9 +387,10 @@ class _HomeScreenState extends State<HomeScreen> {
             width: 62,
             height: 62,
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: isDark ? Colors.black : Colors.white,
               borderRadius: BorderRadius.circular(14),
-              boxShadow: [
+              border: isDark ? Border.all(color: Colors.white12) : null,
+              boxShadow: isDark ? null : [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.07),
                   blurRadius: 8,
@@ -319,8 +403,8 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 8),
           Text(
             label,
-            style: const TextStyle(
-              color: Colors.black87,
+            style: TextStyle(
+              color: isDark ? Colors.white70 : Colors.black87,
               fontSize: 12,
               fontWeight: FontWeight.w500,
             ),
@@ -330,15 +414,15 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildSegurancaBanner() {
+  Widget _buildSegurancaBanner(ThemeData theme, bool isDark) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: verdeBackground,
+          color: isDark ? Colors.transparent : verdeBackground,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: verde.withOpacity(0.15)),
+          border: Border.all(color: isDark ? Colors.white12 : verde.withOpacity(0.15)),
         ),
         child: Row(
           children: [
@@ -356,27 +440,30 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             const SizedBox(width: 14),
-            const Expanded(
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     'Seu dinheiro protegido',
                     style: TextStyle(
-                      color: Colors.black87,
+                      color: isDark ? Colors.white : Colors.black87,
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
                     ),
                   ),
-                  SizedBox(height: 2),
+                  const SizedBox(height: 2),
                   Text(
                     'Suas transações são protegidas com segurança de ponta a ponta.',
-                    style: TextStyle(color: Colors.black54, fontSize: 12),
+                    style: TextStyle(
+                      color: isDark ? Colors.white60 : Colors.black54,
+                      fontSize: 12,
+                    ),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: Colors.black45),
+            Icon(Icons.chevron_right, color: isDark ? Colors.white38 : Colors.black45),
           ],
         ),
       ),
@@ -384,16 +471,17 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // Resumo de entradas e saídas — dados reais do banco
-  Widget _buildResumo() {
+  Widget _buildResumo(ThemeData theme, bool isDark) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: isDark ? Colors.black : Colors.white,
           borderRadius: BorderRadius.circular(14),
-          boxShadow: [
+          border: isDark ? Border.all(color: Colors.white12) : null,
+          boxShadow: isDark ? null : [
             BoxShadow(
               color: Colors.black.withOpacity(0.05),
               blurRadius: 8,
@@ -408,12 +496,18 @@ class _HomeScreenState extends State<HomeScreen> {
               'Entradas',
               '+ ${CurrencyFormatter.format(_totalEntradas)}',
               true,
+              isDark,
             ),
-            Container(width: 1, height: 40, color: Colors.grey.shade200),
+            Container(
+              width: 1,
+              height: 40,
+              color: isDark ? Colors.white10 : Colors.grey.shade200,
+            ),
             _buildResumoItem(
               'Saídas',
               '- ${CurrencyFormatter.format(_totalSaidas)}',
               false,
+              isDark,
             ),
           ],
         ),
@@ -421,18 +515,21 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildResumoItem(String label, String valor, bool positivo) {
+  Widget _buildResumoItem(String label, String valor, bool positivo, bool isDark) {
     return Column(
       children: [
         Text(
           label,
-          style: const TextStyle(color: Colors.black54, fontSize: 12),
+          style: TextStyle(
+            color: isDark ? Colors.white60 : Colors.black54,
+            fontSize: 12,
+          ),
         ),
         const SizedBox(height: 4),
         Text(
           valor,
           style: TextStyle(
-            color: positivo ? verde : Colors.black87,
+            color: positivo ? verde : (isDark ? Colors.white : Colors.black87),
             fontWeight: FontWeight.bold,
             fontSize: 15,
           ),
@@ -473,16 +570,16 @@ class _HomeScreenState extends State<HomeScreen> {
     return false;
   }
 
-  Widget _buildMovimentacoes() {
+  Widget _buildMovimentacoes(ThemeData theme, bool isDark) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Últimas movimentações',
             style: TextStyle(
-              color: Colors.black87,
+              color: isDark ? Colors.white : Colors.black87,
               fontSize: 17,
               fontWeight: FontWeight.bold,
             ),
@@ -493,9 +590,10 @@ class _HomeScreenState extends State<HomeScreen> {
               width: double.infinity,
               padding: const EdgeInsets.all(32),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: isDark ? Colors.black : Colors.white,
                 borderRadius: BorderRadius.circular(14),
-                boxShadow: [
+                border: isDark ? Border.all(color: Colors.white12) : null,
+                boxShadow: isDark ? null : [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.05),
                     blurRadius: 8,
@@ -503,13 +601,20 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ],
               ),
-              child: const Column(
+              child: Column(
                 children: [
-                  Icon(Icons.inbox_outlined, color: Colors.black26, size: 48),
-                  SizedBox(height: 8),
+                  Icon(
+                    Icons.inbox_outlined,
+                    color: isDark ? Colors.white24 : Colors.black26,
+                    size: 48,
+                  ),
+                  const SizedBox(height: 8),
                   Text(
                     'Nenhuma movimentação ainda',
-                    style: TextStyle(color: Colors.black45, fontSize: 14),
+                    style: TextStyle(
+                      color: isDark ? Colors.white38 : Colors.black45,
+                      fontSize: 14,
+                    ),
                   ),
                 ],
               ),
@@ -517,9 +622,10 @@ class _HomeScreenState extends State<HomeScreen> {
           else
             Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: isDark ? Colors.black : Colors.white,
                 borderRadius: BorderRadius.circular(14),
-                boxShadow: [
+                border: isDark ? Border.all(color: Colors.white12) : null,
+                boxShadow: isDark ? null : [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.05),
                     blurRadius: 8,
@@ -575,8 +681,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                 children: [
                                   Text(
                                     titulo,
-                                    style: const TextStyle(
-                                      color: Colors.black87,
+                                    style: TextStyle(
+                                      color: isDark ? Colors.white : Colors.black87,
                                       fontWeight: FontWeight.w600,
                                       fontSize: 14,
                                     ),
@@ -584,8 +690,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                   const SizedBox(height: 3),
                                   Text(
                                     dataStr,
-                                    style: const TextStyle(
-                                      color: Colors.black45,
+                                    style: TextStyle(
+                                      color: isDark ? Colors.white38 : Colors.black45,
                                       fontSize: 12,
                                     ),
                                   ),
@@ -595,7 +701,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             Text(
                               valorStr,
                               style: TextStyle(
-                                color: positivo ? verde : Colors.black87,
+                                color: positivo ? verde : (isDark ? Colors.white : Colors.black87),
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14,
                               ),
@@ -604,7 +710,12 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                       if (i < _transacoes.length - 1)
-                        const Divider(height: 1, indent: 16, endIndent: 16),
+                        Divider(
+                          height: 1,
+                          indent: 16,
+                          endIndent: 16,
+                          color: isDark ? Colors.white10 : null,
+                        ),
                     ],
                   );
                 }).toList(),
@@ -615,7 +726,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildBottomNav() {
+  Widget _buildBottomNav(ThemeData theme, bool isDark) {
     final items = [
       {'icon': Icons.home_rounded, 'label': 'Início', 'action': 'home'},
       {'icon': Icons.bar_chart_rounded, 'label': 'Cotação', 'action': 'soon'},
@@ -633,8 +744,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
+        color: isDark ? Colors.black : Colors.white,
+        border: isDark ? const Border(top: BorderSide(color: Colors.white12)) : null,
+        boxShadow: isDark ? null : [
           BoxShadow(
             color: Colors.black.withOpacity(0.08),
             blurRadius: 10,
@@ -666,14 +778,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     Icon(
                       item['icon'] as IconData,
-                      color: selected ? verde : Colors.black38,
+                      color: selected ? verde : (isDark ? Colors.white38 : Colors.black38),
                       size: 26,
                     ),
                     const SizedBox(height: 4),
                     Text(
                       item['label'] as String,
                       style: TextStyle(
-                        color: selected ? verde : Colors.black38,
+                        color: selected ? verde : (isDark ? Colors.white38 : Colors.black38),
                         fontSize: 11,
                         fontWeight: selected
                             ? FontWeight.w600

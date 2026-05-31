@@ -131,36 +131,39 @@ class _TransferenciaScreenState extends State<TransferenciaScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: isDark ? Colors.black : theme.colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: isDark ? Colors.black : theme.colorScheme.surface,
         elevation: 0,
-        systemOverlayStyle: SystemUiOverlayStyle.dark,
+        systemOverlayStyle: isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
         leading: IconButton(
-          icon: const Icon(
+          icon: Icon(
             Icons.arrow_back_ios,
-            color: Colors.black87,
+            color: isDark ? Colors.white : Colors.black87,
             size: 20,
           ),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: Text(
           'Transferência',
           style: TextStyle(
-            color: Colors.black87,
+            color: isDark ? Colors.white : Colors.black87,
             fontSize: 17,
             fontWeight: FontWeight.w600,
           ),
         ),
         centerTitle: true,
       ),
-      body: _buildPixTab(),
-      bottomNavigationBar: _buildBottomNavBar(),
+      body: _buildPixTab(theme, isDark),
+      bottomNavigationBar: _buildBottomNavBar(theme, isDark),
     );
   }
 
-  Widget _buildPixTab() {
+  Widget _buildPixTab(ThemeData theme, bool isDark) {
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       child: Form(
@@ -168,29 +171,29 @@ class _TransferenciaScreenState extends State<TransferenciaScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildFieldLabel('Saldo atual'),
+            _buildFieldLabel('Saldo atual', isDark),
             const SizedBox(height: 8),
-            _buildBalanceField(),
+            _buildBalanceField(theme, isDark),
             const SizedBox(height: 20),
-            _buildFieldLabel('Chave Pix'),
+            _buildFieldLabel('Chave Pix', isDark),
             const SizedBox(height: 8),
-            _buildPixKeyField(),
+            _buildPixKeyField(theme, isDark),
             const SizedBox(height: 20),
-            _buildFieldLabel('Nome do recebedor'),
+            _buildFieldLabel('Nome do recebedor', isDark),
             const SizedBox(height: 8),
-            _buildReadOnlyField('Será exibido automaticamente'),
+            _buildReadOnlyField('Será exibido automaticamente', theme, isDark),
             const SizedBox(height: 20),
-            _buildFieldLabel('Valor'),
+            _buildFieldLabel('Valor', isDark),
             const SizedBox(height: 8),
-            _buildValueField(),
+            _buildValueField(theme, isDark),
             const SizedBox(height: 20),
-            _buildFieldLabel('Descrição (opcional)'),
+            _buildFieldLabel('Descrição (opcional)', isDark),
             const SizedBox(height: 8),
-            _buildDescriptionField(),
+            _buildDescriptionField(theme, isDark),
             const SizedBox(height: 32),
             _buildTransferButton(),
             const SizedBox(height: 16),
-            _buildSecurityBadge(),
+            _buildSecurityBadge(isDark),
             const SizedBox(height: 16),
           ],
         ),
@@ -198,31 +201,31 @@ class _TransferenciaScreenState extends State<TransferenciaScreen> {
     );
   }
 
-  Widget _buildFieldLabel(String label) {
+  Widget _buildFieldLabel(String label, bool isDark) {
     return Text(
       label,
-      style: const TextStyle(
-        color: Colors.black87,
+      style: TextStyle(
+        color: isDark ? Colors.white70 : Colors.black87,
         fontSize: 14,
         fontWeight: FontWeight.w500,
       ),
     );
   }
 
-  Widget _buildBalanceField() {
+  Widget _buildBalanceField(ThemeData theme, bool isDark) {
     return Container(
       decoration: BoxDecoration(
-        border: Border.all(color: _borderColor),
+        border: Border.all(color: isDark ? Colors.white12 : _borderColor),
         borderRadius: BorderRadius.circular(10),
-        color: const Color(0xFFF9FAFB),
+        color: isDark ? Colors.black : const Color(0xFFF9FAFB),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       child: SizedBox(
         width: double.infinity,
         child: Text(
           'R\$ ${CurrencyFormatter.format(widget.usuario.saldo)}',
-          style: const TextStyle(
-            color: Colors.black87,
+          style: TextStyle(
+            color: isDark ? Colors.white : Colors.black87,
             fontSize: 16,
             fontWeight: FontWeight.w600,
           ),
@@ -231,22 +234,23 @@ class _TransferenciaScreenState extends State<TransferenciaScreen> {
     );
   }
 
-  Widget _buildPixKeyField() {
+  Widget _buildPixKeyField(ThemeData theme, bool isDark) {
     return Container(
       decoration: BoxDecoration(
-        border: Border.all(color: _borderColor),
+        border: Border.all(color: isDark ? Colors.white12 : _borderColor),
         borderRadius: BorderRadius.circular(10),
+        color: isDark ? Colors.black : Colors.transparent,
       ),
       child: Row(
         children: [
           Expanded(
             child: TextFormField(
               controller: _pixKeyController,
-              style: const TextStyle(fontSize: 14, color: Colors.black87),
-              decoration: const InputDecoration(
+              style: TextStyle(fontSize: 14, color: isDark ? Colors.white : Colors.black87),
+              decoration: InputDecoration(
                 hintText: 'CPF, e-mail, telefone ou chave aleatória',
-                hintStyle: TextStyle(color: _hintColor, fontSize: 13),
-                contentPadding: EdgeInsets.symmetric(
+                hintStyle: TextStyle(color: isDark ? Colors.white38 : _hintColor, fontSize: 13),
+                contentPadding: const EdgeInsets.symmetric(
                   horizontal: 14,
                   vertical: 14,
                 ),
@@ -269,36 +273,37 @@ class _TransferenciaScreenState extends State<TransferenciaScreen> {
     );
   }
 
-  Widget _buildReadOnlyField(String hint) {
+  Widget _buildReadOnlyField(String hint, ThemeData theme, bool isDark) {
     return Container(
       decoration: BoxDecoration(
-        border: Border.all(color: _borderColor),
+        border: Border.all(color: isDark ? Colors.white12 : _borderColor),
         borderRadius: BorderRadius.circular(10),
-        color: const Color(0xFFF9FAFB),
+        color: isDark ? Colors.black : const Color(0xFFF9FAFB),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       child: SizedBox(
         width: double.infinity,
         child: Text(
           hint,
-          style: const TextStyle(color: _hintColor, fontSize: 13),
+          style: TextStyle(color: isDark ? Colors.white38 : _hintColor, fontSize: 13),
         ),
       ),
     );
   }
 
-  Widget _buildValueField() {
+  Widget _buildValueField(ThemeData theme, bool isDark) {
     return Container(
       decoration: BoxDecoration(
-        border: Border.all(color: _borderColor),
+        border: Border.all(color: isDark ? Colors.white12 : _borderColor),
         borderRadius: BorderRadius.circular(10),
+        color: isDark ? Colors.black : Colors.transparent,
       ),
       child: TextFormField(
         controller: _valueController,
         keyboardType: TextInputType.number,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 16,
-          color: Colors.black87,
+          color: isDark ? Colors.white : Colors.black87,
           fontWeight: FontWeight.w500,
         ),
         decoration: const InputDecoration(
@@ -320,22 +325,23 @@ class _TransferenciaScreenState extends State<TransferenciaScreen> {
     );
   }
 
-  Widget _buildDescriptionField() {
+  Widget _buildDescriptionField(ThemeData theme, bool isDark) {
     return Container(
       decoration: BoxDecoration(
-        border: Border.all(color: _borderColor),
+        border: Border.all(color: isDark ? Colors.white12 : _borderColor),
         borderRadius: BorderRadius.circular(10),
+        color: isDark ? Colors.black : Colors.transparent,
       ),
       child: Stack(
         children: [
           TextFormField(
             controller: _descriptionController,
             maxLength: 50,
-            style: const TextStyle(fontSize: 14, color: Colors.black87),
-            decoration: const InputDecoration(
+            style: TextStyle(fontSize: 14, color: isDark ? Colors.white : Colors.black87),
+            decoration: InputDecoration(
               hintText: 'Ex: Aluguel, pagamento...',
-              hintStyle: TextStyle(color: _hintColor, fontSize: 13),
-              contentPadding: EdgeInsets.fromLTRB(14, 14, 50, 14),
+              hintStyle: TextStyle(color: isDark ? Colors.white38 : _hintColor, fontSize: 13),
+              contentPadding: const EdgeInsets.fromLTRB(14, 14, 50, 14),
               border: InputBorder.none,
               counterText: '',
             ),
@@ -347,7 +353,7 @@ class _TransferenciaScreenState extends State<TransferenciaScreen> {
             child: Center(
               child: Text(
                 '$_descriptionLength/50',
-                style: const TextStyle(color: _hintColor, fontSize: 11),
+                style: TextStyle(color: isDark ? Colors.white38 : _hintColor, fontSize: 11),
               ),
             ),
           ),
@@ -384,22 +390,23 @@ class _TransferenciaScreenState extends State<TransferenciaScreen> {
     );
   }
 
-  Widget _buildSecurityBadge() {
+  Widget _buildSecurityBadge(bool isDark) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: _lightGreen,
+        color: isDark ? Colors.transparent : _lightGreen,
         borderRadius: BorderRadius.circular(12),
+        border: isDark ? Border.all(color: Colors.white12) : null,
       ),
-      child: const Row(
+      child: Row(
         children: [
-          Icon(Icons.shield_outlined, color: _green, size: 22),
-          SizedBox(width: 12),
+          const Icon(Icons.shield_outlined, color: _green, size: 22),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(
               'Suas transações são protegidas\ncom segurança de ponta a ponta.',
               style: TextStyle(
-                color: Color(0xFF1B5E34),
+                color: isDark ? Colors.white70 : const Color(0xFF1B5E34),
                 fontSize: 12.5,
                 height: 1.5,
               ),
@@ -410,7 +417,7 @@ class _TransferenciaScreenState extends State<TransferenciaScreen> {
     );
   }
 
-  Widget _buildBottomNavBar() {
+  Widget _buildBottomNavBar(ThemeData theme, bool isDark) {
     final items = [
       _NavItem(
         icon: Icons.home_outlined,
@@ -435,20 +442,21 @@ class _TransferenciaScreenState extends State<TransferenciaScreen> {
     ];
 
     return Container(
-      decoration: const BoxDecoration(
-        border: Border(top: BorderSide(color: _borderColor, width: 1)),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.black : theme.colorScheme.surface,
+        border: Border(top: BorderSide(color: isDark ? Colors.white12 : _borderColor, width: 1)),
       ),
       child: BottomNavigationBar(
         currentIndex: _currentNavIndex,
         onTap: (i) => setState(() => _currentNavIndex = i),
         selectedItemColor: _green,
-        unselectedItemColor: _labelColor,
+        unselectedItemColor: isDark ? Colors.white38 : _labelColor,
         selectedLabelStyle: const TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w600,
         ),
         unselectedLabelStyle: const TextStyle(fontSize: 11),
-        backgroundColor: Colors.white,
+        backgroundColor: isDark ? Colors.black : theme.colorScheme.surface,
         elevation: 0,
         type: BottomNavigationBarType.fixed,
         items: List.generate(

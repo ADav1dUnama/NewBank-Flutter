@@ -6,7 +6,7 @@ import 'package:newbank/models/usuario.dart';
 class ExtratoScreen extends StatefulWidget {
   final Usuario usuario;
 
-  const ExtratoScreen({Key? key, required this.usuario}) : super(key: key);
+  const ExtratoScreen({super.key, required this.usuario});
 
   @override
   State<ExtratoScreen> createState() => _ExtratoScreenState();
@@ -88,12 +88,15 @@ class _ExtratoScreenState extends State<ExtratoScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final transacoes = _transacoesFiltradas;
+    const verde = Color(0xFF1B7A3E);
 
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: isDark ? theme.colorScheme.surface : Colors.grey[100],
       appBar: AppBar(
-        backgroundColor: Colors.green,
+        backgroundColor: verde,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
@@ -112,14 +115,14 @@ class _ExtratoScreenState extends State<ExtratoScreen> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildSaldoHeader(),
+          _buildSaldoHeader(isDark),
 
-          _buildFiltros(),
+          _buildFiltros(theme, isDark),
           
           Expanded(
             child: transacoes.isEmpty
-                ? _buildEstadoVazio()
-                : _buildListaTransacoes(transacoes),
+                ? _buildEstadoVazio(theme, isDark)
+                : _buildListaTransacoes(transacoes, theme, isDark),
           ),
         ],
       ),
@@ -127,6 +130,9 @@ class _ExtratoScreenState extends State<ExtratoScreen> {
         currentIndex: _selectedIndex,
         onTap: _onBottomNavTapped,
         type: BottomNavigationBarType.fixed,
+        backgroundColor: isDark ? Colors.black : theme.colorScheme.surface,
+        selectedItemColor: verde,
+        unselectedItemColor: isDark ? Colors.white38 : Colors.grey,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Início'),
           BottomNavigationBarItem(
@@ -139,10 +145,11 @@ class _ExtratoScreenState extends State<ExtratoScreen> {
     );
   }
 
-  Widget _buildSaldoHeader() {
+  Widget _buildSaldoHeader(bool isDark) {
+    const verde = Color(0xFF1B7A3E);
     return Container(
       width: double.infinity,
-      color: Colors.green,
+      color: verde,
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -173,9 +180,10 @@ class _ExtratoScreenState extends State<ExtratoScreen> {
     );
   }
 
-  Widget _buildFiltros() {
+  Widget _buildFiltros(ThemeData theme, bool isDark) {
+    const verde = Color(0xFF1B7A3E);
     return Container(
-      color: Colors.white,
+      color: isDark ? Colors.black : theme.colorScheme.surface,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -184,7 +192,7 @@ class _ExtratoScreenState extends State<ExtratoScreen> {
             'Filtrar por',
             style: TextStyle(
               fontSize: 12,
-              color: Colors.grey[600],
+              color: isDark ? Colors.white60 : Colors.grey[600],
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -201,10 +209,10 @@ class _ExtratoScreenState extends State<ExtratoScreen> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     decoration: BoxDecoration(
-                      color: isSelected ? Colors.green : Colors.grey[100],
+                      color: isSelected ? verde : (isDark ? Colors.white10 : Colors.grey[100]),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: isSelected ? Colors.green : Colors.grey[300]!,
+                        color: isSelected ? verde : (isDark ? Colors.white24 : Colors.grey[300]!),
                       ),
                     ),
                     child: Text(
@@ -212,7 +220,7 @@ class _ExtratoScreenState extends State<ExtratoScreen> {
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
-                        color: isSelected ? Colors.white : Colors.grey[700],
+                        color: isSelected ? Colors.white : (isDark ? Colors.white70 : Colors.grey[700]),
                       ),
                     ),
                   ),
@@ -225,7 +233,8 @@ class _ExtratoScreenState extends State<ExtratoScreen> {
     );
   }
 
-  Widget _buildEstadoVazio() {
+  Widget _buildEstadoVazio(ThemeData theme, bool isDark) {
+    const verde = Color(0xFF1B7A3E);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -235,13 +244,13 @@ class _ExtratoScreenState extends State<ExtratoScreen> {
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: Colors.green[50],
+                color: isDark ? verde.withOpacity(0.1) : Colors.green[50],
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.receipt_long_outlined,
                 size: 56,
-                color: Colors.green[300],
+                color: isDark ? verde.withOpacity(0.5) : Colors.green[300],
               ),
             ),
             const SizedBox(height: 24),
@@ -250,7 +259,7 @@ class _ExtratoScreenState extends State<ExtratoScreen> {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: Colors.grey[700],
+                color: isDark ? Colors.white70 : Colors.grey[700],
               ),
             ),
             const SizedBox(height: 8),
@@ -261,7 +270,7 @@ class _ExtratoScreenState extends State<ExtratoScreen> {
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 13,
-                color: Colors.grey[500],
+                color: isDark ? Colors.white38 : Colors.grey[500],
                 height: 1.5,
               ),
             ),
@@ -271,7 +280,7 @@ class _ExtratoScreenState extends State<ExtratoScreen> {
     );
   }
 
-  Widget _buildListaTransacoes(List<Map<String, dynamic>> transacoes) {
+  Widget _buildListaTransacoes(List<Map<String, dynamic>> transacoes, ThemeData theme, bool isDark) {
     final Map<String, List<Map<String, dynamic>>> agrupadas = {};
     for (final t in transacoes) {
       final data = t['data'] as String;
@@ -285,7 +294,7 @@ class _ExtratoScreenState extends State<ExtratoScreen> {
           '${transacoes.length} transaç${transacoes.length == 1 ? 'ão' : 'ões'}',
           style: TextStyle(
             fontSize: 13,
-            color: Colors.grey[600],
+            color: isDark ? Colors.white60 : Colors.grey[600],
           ),
         ),
         const SizedBox(height: 12),
@@ -303,12 +312,12 @@ class _ExtratoScreenState extends State<ExtratoScreen> {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: Colors.grey[600],
+                        color: isDark ? Colors.white60 : Colors.grey[600],
                       ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: Divider(color: Colors.grey[300], height: 1),
+                      child: Divider(color: isDark ? Colors.white10 : Colors.grey[300], height: 1),
                     ),
                   ],
                 ),
@@ -316,9 +325,10 @@ class _ExtratoScreenState extends State<ExtratoScreen> {
               // Cards de transação
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: isDark ? Colors.black : Colors.white,
                   borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
+                  border: isDark ? Border.all(color: Colors.white12) : null,
+                  boxShadow: isDark ? null : [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.05),
                       blurRadius: 4,
@@ -328,7 +338,7 @@ class _ExtratoScreenState extends State<ExtratoScreen> {
                 child: Column(
                   children: entry.value.asMap().entries.map((e) {
                     final isLast = e.key == entry.value.length - 1;
-                    return _buildTransacaoItem(e.value, isLast);
+                    return _buildTransacaoItem(e.value, isLast, theme, isDark);
                   }).toList(),
                 ),
               ),
@@ -341,18 +351,18 @@ class _ExtratoScreenState extends State<ExtratoScreen> {
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: Colors.blue[50],
+            color: isDark ? Colors.blue.withOpacity(0.1) : Colors.blue[50],
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.blue[200]!),
+            border: Border.all(color: isDark ? Colors.blue.withOpacity(0.5) : Colors.blue[200]!),
           ),
           child: Row(
             children: [
-              Icon(Icons.info_outline, color: Colors.blue[600], size: 20),
+              Icon(Icons.info_outline, color: isDark ? Colors.blue[300] : Colors.blue[600], size: 20),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   'Exibindo todas as movimentações da conta',
-                  style: TextStyle(color: Colors.blue[900], fontSize: 13),
+                  style: TextStyle(color: isDark ? Colors.blue[100] : Colors.blue[900], fontSize: 13),
                 ),
               ),
             ],
@@ -363,7 +373,7 @@ class _ExtratoScreenState extends State<ExtratoScreen> {
     );
   }
 
-  Widget _buildTransacaoItem(Map<String, dynamic> transacao, bool isLast) {
+  Widget _buildTransacaoItem(Map<String, dynamic> transacao, bool isLast, ThemeData theme, bool isDark) {
     final tipo = transacao['tipo'] as String;
     final cor = _corPorTipo(tipo);
     final icone = _iconePorTipo(tipo);
@@ -393,10 +403,10 @@ class _ExtratoScreenState extends State<ExtratoScreen> {
                   children: [
                     Text(
                       transacao['descricao'] as String,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: Colors.black87,
+                        color: isDark ? Colors.white : Colors.black87,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -404,7 +414,7 @@ class _ExtratoScreenState extends State<ExtratoScreen> {
                       tipo,
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.grey[500],
+                        color: isDark ? Colors.white38 : Colors.grey[500],
                       ),
                     ),
                   ],
@@ -420,14 +430,14 @@ class _ExtratoScreenState extends State<ExtratoScreen> {
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                       color: tipo == 'Entrada'
-                          ? Colors.green[700]
-                          : Colors.red[700],
+                          ? (isDark ? Colors.green[300] : Colors.green[700])
+                          : (isDark ? Colors.red[300] : Colors.red[700]),
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     transacao['hora'] as String,
-                    style: TextStyle(fontSize: 11, color: Colors.grey[400]),
+                    style: TextStyle(fontSize: 11, color: isDark ? Colors.white24 : Colors.grey[400]),
                   ),
                 ],
               ),
@@ -439,7 +449,7 @@ class _ExtratoScreenState extends State<ExtratoScreen> {
             height: 1,
             indent: 72,
             endIndent: 16,
-            color: Colors.grey[100],
+            color: isDark ? Colors.white10 : Colors.grey[100],
           ),
       ],
     );

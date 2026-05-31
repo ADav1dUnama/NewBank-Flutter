@@ -7,7 +7,7 @@ import 'models/usuario.dart';
 class CotacaoScreen extends StatefulWidget {
   final Usuario usuario;
 
-  const CotacaoScreen({Key? key, required this.usuario}) : super(key: key);
+  const CotacaoScreen({super.key, required this.usuario});
 
   @override
   State<CotacaoScreen> createState() => _CotacaoScreenState();
@@ -54,21 +54,6 @@ class _CotacaoScreenState extends State<CotacaoScreen> {
     'INR': '🇮🇳',
     'MXN': '🇲🇽',
     'ARS': '🇦🇷',
-  };
-
-  final Map<String, Color> _moedaCores = {
-    'BRL': Colors.green,
-    'USD': Colors.blue,
-    'EUR': Colors.amber,
-    'GBP': Colors.purple,
-    'JPY': Colors.red,
-    'CAD': Colors.cyan,
-    'AUD': Colors.orange,
-    'CHF': Colors.red,
-    'CNY': Colors.red,
-    'INR': Colors.orange,
-    'MXN': Colors.pink,
-    'ARS': Colors.indigo,
   };
 
   @override
@@ -212,10 +197,14 @@ class _CotacaoScreenState extends State<CotacaoScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    const verde = Color(0xFF1B7A3E);
+
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: isDark ? Colors.black : Colors.grey[100],
       appBar: AppBar(
-        backgroundColor: Color(0xFF1B7A3E),
+        backgroundColor: verde,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
@@ -239,10 +228,13 @@ class _CotacaoScreenState extends State<CotacaoScreen> {
             children: [
               Text(
                 'Converta entre moedas com as melhores taxas',
-                style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                style: TextStyle(
+                  color: isDark ? Colors.white60 : Colors.grey[600],
+                  fontSize: 14,
+                ),
               ),
               const SizedBox(height: 24),
-              _buildInputCard(),
+              _buildInputCard(theme, isDark),
               const SizedBox(height: 16),
               _buildCurrencyCard(
                 label: 'De (Moeda de Origem)',
@@ -251,14 +243,17 @@ class _CotacaoScreenState extends State<CotacaoScreen> {
                   setState(() => _moedaOrigem = newValue!);
                   _resultado = null;
                 },
+                theme: theme,
+                isDark: isDark,
               ),
               const SizedBox(height: 12),
               Center(
                 child: Container(
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: isDark ? Colors.black : Colors.white,
                     shape: BoxShape.circle,
-                    boxShadow: [
+                    border: isDark ? Border.all(color: Colors.white12) : null,
+                    boxShadow: isDark ? null : [
                       BoxShadow(
                         color: Colors.black.withOpacity(0.1),
                         blurRadius: 8,
@@ -266,7 +261,7 @@ class _CotacaoScreenState extends State<CotacaoScreen> {
                     ],
                   ),
                   child: IconButton(
-                    icon: const Icon(Icons.swap_vert, color: Color(0xFF1B7A3E)),
+                    icon: const Icon(Icons.swap_vert, color: verde),
                     onPressed: _trocarMoedas,
                   ),
                 ),
@@ -279,6 +274,8 @@ class _CotacaoScreenState extends State<CotacaoScreen> {
                   setState(() => _moedaDestino = newValue!);
                   _resultado = null;
                 },
+                theme: theme,
+                isDark: isDark,
               ),
               const SizedBox(height: 24),
               SizedBox(
@@ -286,7 +283,7 @@ class _CotacaoScreenState extends State<CotacaoScreen> {
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _buscarCotacao,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xFF1B7A3E),
+                    backgroundColor: verde,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -313,24 +310,26 @@ class _CotacaoScreenState extends State<CotacaoScreen> {
                 ),
               ),
               const SizedBox(height: 24),
-              if (_resultado != null) _buildResultCard(),
+              if (_resultado != null) _buildResultCard(theme, isDark),
               if (_erro != null)
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.red[50],
+                    color: isDark ? Colors.red.withOpacity(0.1) : Colors.red[50],
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.red[200]!),
+                    border: Border.all(color: isDark ? Colors.red.withOpacity(0.5) : Colors.red[200]!),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.error_outline, color: Colors.red[600]),
+                      Icon(Icons.error_outline, color: isDark ? Colors.red[300] : Colors.red[600]),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
                           _erro!,
-                          style:
-                              TextStyle(color: Colors.red[900], fontSize: 13),
+                          style: TextStyle(
+                            color: isDark ? Colors.red[100] : Colors.red[900],
+                            fontSize: 13,
+                          ),
                         ),
                       ),
                     ],
@@ -340,18 +339,21 @@ class _CotacaoScreenState extends State<CotacaoScreen> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.blue[50],
+                  color: isDark ? Colors.blue.withOpacity(0.1) : Colors.blue[50],
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.blue[200]!),
+                  border: Border.all(color: isDark ? Colors.blue.withOpacity(0.5) : Colors.blue[200]!),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.info_outline, color: Colors.blue[600], size: 20),
+                    Icon(Icons.info_outline, color: isDark ? Colors.blue[300] : Colors.blue[600], size: 20),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         'Taxas atualizadas em tempo real',
-                        style: TextStyle(color: Colors.blue[900], fontSize: 13),
+                        style: TextStyle(
+                          color: isDark ? Colors.blue[100] : Colors.blue[900],
+                          fontSize: 13,
+                        ),
                       ),
                     ),
                   ],
@@ -366,6 +368,9 @@ class _CotacaoScreenState extends State<CotacaoScreen> {
         currentIndex: _selectedIndex,
         onTap: _onBottomNavTapped,
         type: BottomNavigationBarType.fixed,
+        backgroundColor: isDark ? Colors.black : theme.colorScheme.surface,
+        selectedItemColor: verde,
+        unselectedItemColor: isDark ? Colors.white38 : Colors.grey,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Início'),
           BottomNavigationBarItem(
@@ -378,13 +383,14 @@ class _CotacaoScreenState extends State<CotacaoScreen> {
     );
   }
 
-  Widget _buildInputCard() {
+  Widget _buildInputCard(ThemeData theme, bool isDark) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? Colors.black : Colors.white,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [
+        border: isDark ? Border.all(color: Colors.white12) : null,
+        boxShadow: isDark ? null : [
           BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4),
         ],
       ),
@@ -393,7 +399,10 @@ class _CotacaoScreenState extends State<CotacaoScreen> {
         children: [
           Text(
             'Valor a Converter',
-            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+            style: TextStyle(
+              fontSize: 12,
+              color: isDark ? Colors.white60 : Colors.grey[600],
+            ),
           ),
           const SizedBox(height: 8),
           TextField(
@@ -424,13 +433,16 @@ class _CotacaoScreenState extends State<CotacaoScreen> {
     required String label,
     required String moedaSelecionada,
     required Function(String?) onChanged,
+    required ThemeData theme,
+    required bool isDark,
   }) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? Colors.black : Colors.white,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [
+        border: isDark ? Border.all(color: Colors.white12) : null,
+        boxShadow: isDark ? null : [
           BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4),
         ],
       ),
@@ -439,11 +451,14 @@ class _CotacaoScreenState extends State<CotacaoScreen> {
         children: [
           Text(
             label,
-            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+            style: TextStyle(
+              fontSize: 12,
+              color: isDark ? Colors.white60 : Colors.grey[600],
+            ),
           ),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
-            value: moedaSelecionada,
+            initialValue: moedaSelecionada,
             items: _moedas.map((moeda) {
               return DropdownMenuItem(
                 value: moeda,
@@ -470,27 +485,30 @@ class _CotacaoScreenState extends State<CotacaoScreen> {
     );
   }
 
-  Widget _buildResultCard() {
+  Widget _buildResultCard(ThemeData theme, bool isDark) {
+    final successColor = isDark ? Colors.green[900]!.withOpacity(0.3) : Colors.green[50];
+    final borderColor = isDark ? Colors.green[700]!.withOpacity(0.5) : Colors.green[300];
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.green[50],
+        color: successColor,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.green[300]!),
+        border: Border.all(color: borderColor!),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.check_circle, color: Colors.green[600]),
+              Icon(Icons.check_circle, color: isDark ? Colors.green[400] : Colors.green[600]),
               const SizedBox(width: 8),
               Text(
                 'Conversão Realizada',
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: Colors.green[900],
+                  color: isDark ? Colors.green[100] : Colors.green[900],
                 ),
               ),
             ],
@@ -499,26 +517,26 @@ class _CotacaoScreenState extends State<CotacaoScreen> {
           _buildResultRow(
             'Valor Original',
             '${_resultado!.originalAmount.toStringAsFixed(2)} ${_resultado!.fromCurrency}',
-            Colors.grey[700],
+            isDark ? Colors.white70 : Colors.grey[700],
           ),
           const SizedBox(height: 12),
           Center(
-            child: Icon(Icons.arrow_downward, color: Colors.green[600]),
+            child: Icon(Icons.arrow_downward, color: isDark ? Colors.green[400] : Colors.green[600]),
           ),
           const SizedBox(height: 12),
           _buildResultRow(
             'Valor Convertido',
             '${_resultado!.convertedAmount.toStringAsFixed(2)} ${_resultado!.toCurrency}',
-            Colors.green[700],
+            isDark ? Colors.green[200] : Colors.green[700],
             isBold: true,
           ),
           const SizedBox(height: 16),
-          Divider(color: Colors.green[300]),
+          Divider(color: borderColor),
           const SizedBox(height: 12),
           _buildResultRow(
             'Taxa de Câmbio',
             '1 ${_resultado!.fromCurrency} = ${_resultado!.exchangeRate.toStringAsFixed(4)} ${_resultado!.toCurrency}',
-            Colors.grey[600],
+            isDark ? Colors.white54 : Colors.grey[600],
             fontSize: 12,
           ),
         ],

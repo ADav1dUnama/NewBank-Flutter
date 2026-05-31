@@ -80,6 +80,8 @@ class _CadastroScreenState extends State<CadastroScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     const verde = Color(0xFF1B7A3E);
 
     return Scaffold(
@@ -117,12 +119,13 @@ class _CadastroScreenState extends State<CadastroScreen> {
               flex: 8,
               child: Container(
                 width: double.infinity,
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.only(
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.black : Colors.white,
+                  borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(28),
                     topRight: Radius.circular(28),
                   ),
+                  border: isDark ? const Border(top: BorderSide(color: Colors.white12)) : null,
                 ),
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.symmetric(
@@ -144,17 +147,29 @@ class _CadastroScreenState extends State<CadastroScreen> {
                         const SizedBox(height: 6),
                         TextFormField(
                           controller: _nomeController,
+                          style: TextStyle(color: isDark ? Colors.white : Colors.black87),
                           decoration: InputDecoration(
                             hintText: 'Digite seu nome',
+                            hintStyle: const TextStyle(color: Colors.grey),
                             prefixIcon: const Icon(
                               Icons.person_outline,
                               color: Colors.grey,
                             ),
                             filled: true,
-                            fillColor: const Color(0xFFF5F5F5),
+                            fillColor: isDark ? Colors.black : const Color(0xFFF5F5F5),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: isDark ? const BorderSide(color: Colors.white12) : BorderSide.none,
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: isDark ? Colors.white38 : verde,
+                                width: 1.5,
+                              ),
+                            ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide.none,
                             ),
                           ),
                           validator: (value) {
@@ -187,7 +202,7 @@ class _CadastroScreenState extends State<CadastroScreen> {
                               color: Colors.grey,
                             ),
                             filled: true,
-                            fillColor: const Color(0xFFF5F5F5),
+                            fillColor: isDark ? Colors.white10 : const Color(0xFFF5F5F5),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                               borderSide: BorderSide.none,
@@ -217,8 +232,10 @@ class _CadastroScreenState extends State<CadastroScreen> {
                         TextFormField(
                           controller: _senhaController,
                           obscureText: !_senhaVisivel,
+                          style: TextStyle(color: isDark ? Colors.white : Colors.black87),
                           decoration: InputDecoration(
                             hintText: 'Crie uma senha',
+                            hintStyle: const TextStyle(color: Colors.grey),
                             prefixIcon: const Icon(
                               Icons.lock_outline,
                               color: Colors.grey,
@@ -235,10 +252,20 @@ class _CadastroScreenState extends State<CadastroScreen> {
                               ),
                             ),
                             filled: true,
-                            fillColor: const Color(0xFFF5F5F5),
+                            fillColor: isDark ? Colors.black : const Color(0xFFF5F5F5),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: isDark ? const BorderSide(color: Colors.white12) : BorderSide.none,
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: isDark ? Colors.white38 : verde,
+                                width: 1.5,
+                              ),
+                            ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide.none,
                             ),
                           ),
                           validator: (value) {
@@ -259,17 +286,29 @@ class _CadastroScreenState extends State<CadastroScreen> {
                         ),
                         const SizedBox(height: 6),
                         DropdownButtonFormField<TipoConta>(
-                          value: _tipoConta,
+                          initialValue: _tipoConta,
+                          style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+                          dropdownColor: isDark ? Colors.black : Colors.white,
                           decoration: InputDecoration(
                             prefixIcon: const Icon(
                               Icons.account_balance_outlined,
                               color: Colors.grey,
                             ),
                             filled: true,
-                            fillColor: const Color(0xFFF5F5F5),
+                            fillColor: isDark ? Colors.black : const Color(0xFFF5F5F5),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: isDark ? const BorderSide(color: Colors.white12) : BorderSide.none,
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: isDark ? Colors.white38 : verde,
+                                width: 1.5,
+                              ),
+                            ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide.none,
                             ),
                           ),
                           items: const [

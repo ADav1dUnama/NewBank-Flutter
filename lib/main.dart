@@ -3,7 +3,7 @@ import 'package:newbank/database/app_database.dart';
 import 'package:newbank/models/tipo_conta.dart';
 import 'package:newbank/models/usuario.dart';
 import 'package:newbank/repositories/usuario_repository.dart';
-import 'login_screen.dart';
+import 'landing_page.dart';
 
 Future<void> _seedDatabase() async {
   final repo = UsuarioRepository();
@@ -42,7 +42,18 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
         useMaterial3: true,
       ),
-      home: const LoginScreen(),
+      darkTheme: ThemeData(
+        brightness: Brightness.dark,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.green,
+          brightness: Brightness.dark,
+          surface: Colors.black,
+        ),
+        scaffoldBackgroundColor: Colors.black,
+        useMaterial3: true,
+      ),
+      themeMode: ThemeMode.system,
+      home: const LandingPage(),
     );
   }
 }
