@@ -162,6 +162,15 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  String _getIniciais(String nome) {
+    if (nome.isEmpty) return 'U';
+    final partes = nome.trim().split(' ');
+    if (partes.length > 1) {
+      return (partes.first[0] + partes.last[0]).toUpperCase();
+    }
+    return partes.first[0].toUpperCase();
+  }
+
   Widget _buildDrawer(bool isDark) {
     return Drawer(
       child: Column(
@@ -172,11 +181,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: Image.asset('assets/images/logo.png', fit: BoxFit.contain),
+              child: Center(
+                child: Text(
+                  _getIniciais(_controller.usuario.nomeCompleto),
+                  style: const TextStyle(
+                    color: AppColors.primary,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
@@ -227,7 +239,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 icon: const Icon(Icons.menu, color: Colors.white, size: 28),
                 onPressed: () => Scaffold.of(context).openDrawer(),
               )),
-              const Icon(Icons.notifications_outlined, color: Colors.white, size: 28),
             ],
           ),
           const SizedBox(height: 16),

@@ -74,9 +74,10 @@ class _LoginScreenState extends State<LoginScreen> {
     if (usuarioLogado != null) {
       await _secureStorage.saveLastLoggedUserId(usuarioLogado.id!);
       if (!mounted) return;
-      Navigator.pushReplacement(
+      Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (_) => HomeScreen(usuario: usuarioLogado)),
+        (route) => false,
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(

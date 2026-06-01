@@ -130,12 +130,9 @@ class _ExtratoScreenState extends State<ExtratoScreen> {
     return Scaffold(
       backgroundColor: isDark ? theme.colorScheme.surface : Colors.grey[100],
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         backgroundColor: verde,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
         title: const Text(
           'Extrato',
           style: TextStyle(

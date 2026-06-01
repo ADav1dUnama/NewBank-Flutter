@@ -211,12 +211,9 @@ class _CotacaoScreenState extends State<CotacaoScreen> {
     return Scaffold(
       backgroundColor: isDark ? Colors.black : Colors.grey[100],
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         backgroundColor: verde,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
         title: const Text(
           'Conversor de Moedas',
           style: TextStyle(

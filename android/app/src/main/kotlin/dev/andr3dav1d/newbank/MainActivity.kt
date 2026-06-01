@@ -1,4 +1,4 @@
-package com.example.newbank
+package dev.andr3dav1d.newbank
 
 import io.flutter.embedding.android.FlutterFragmentActivity
 

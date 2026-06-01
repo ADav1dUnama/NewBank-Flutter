@@ -63,9 +63,10 @@ class _BiometricLockScreenState extends State<BiometricLockScreen> {
 
   void _entrar() {
     if (_usuario != null && mounted) {
-      Navigator.pushReplacement(
+      Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (_) => HomeScreen(usuario: _usuario!)),
+        (route) => false,
       );
     }
   }

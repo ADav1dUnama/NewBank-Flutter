@@ -34,7 +34,7 @@ class _TransferenciaScreenState extends State<TransferenciaScreen> {
       transacaoRepo: TransacaoRepository(),
       usuario: widget.usuario,
     );
-    _valueController.text = 'R\$ 0,00';
+    _valueController.text = '0,00';
     
     _controller.addListener(_onControllerUpdate);
   }
@@ -81,10 +81,7 @@ class _TransferenciaScreenState extends State<TransferenciaScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, size: 20),
-          onPressed: () => Navigator.pop(context),
-        ),
+        automaticallyImplyLeading: false,
         title: const Text('Transferência'),
       ),
       body: ListenableBuilder(
@@ -119,12 +116,13 @@ class _TransferenciaScreenState extends State<TransferenciaScreen> {
                   CustomTextField(
                     controller: _valueController,
                     label: 'Valor',
+                    prefixText: 'R\$ ',
                     keyboardType: TextInputType.number,
                     onTap: () {
-                      if (_valueController.text == 'R\$ 0,00') _valueController.clear();
+                      if (_valueController.text == '0,00') _valueController.clear();
                     },
                     validator: (val) {
-                      if (val == null || val.isEmpty || val == 'R\$ 0,00') return 'Informe um valor válido';
+                      if (val == null || val.isEmpty || val == '0,00') return 'Informe um valor válido';
                       return null;
                     },
                   ),
@@ -176,7 +174,7 @@ class _TransferenciaScreenState extends State<TransferenciaScreen> {
         color: isDark ? Colors.black : AppColors.card,
       ),
       child: Text(
-        'R\$ ${CurrencyFormatter.format(widget.usuario.saldo)}',
+        CurrencyFormatter.format(widget.usuario.saldo),
         style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
       ),
     );

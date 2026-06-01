@@ -12,6 +12,7 @@ class CustomTextField extends StatelessWidget {
   final VoidCallback? onTap;
   final bool readOnly;
   final int? maxLength;
+  final String? prefixText;
 
   const CustomTextField({
     super.key,
@@ -25,6 +26,7 @@ class CustomTextField extends StatelessWidget {
     this.onTap,
     this.readOnly = false,
     this.maxLength,
+    this.prefixText,
   });
 
   @override
@@ -67,6 +69,12 @@ class CustomTextField extends StatelessWidget {
             ),
             decoration: InputDecoration(
               hintText: hintText,
+              prefixText: prefixText,
+              prefixStyle: TextStyle(
+                color: isDark ? Colors.white : Colors.black87,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
               hintStyle: TextStyle(
                 color: isDark ? Colors.white38 : AppColors.hint,
                 fontSize: 14,
