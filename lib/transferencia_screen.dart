@@ -1,489 +1,207 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:newbank/models/tipo_transacao.dart';
-import 'package:newbank/models/transacao.dart';
+import 'package:newbank/controllers/transferencia_controller.dart';
 import 'package:newbank/models/usuario.dart';
 import 'package:newbank/repositories/transacao_repository.dart';
-import 'package:newbank/repositories/usuario_repository.dart';
 import 'package:newbank/services/currency_formatter.dart';
-import 'package:newbank/cotacao_screen.dart';
-import 'package:newbank/extrato_screen.dart';
+import 'package:newbank/services/dialog_helper.dart';
+import 'package:newbank/theme/app_colors.dart';
+import 'package:newbank/widgets/custom_text_field.dart';
+import 'package:newbank/widgets/primary_button.dart';
+import 'package:newbank/widgets/custom_bottom_nav_bar.dart';
+import 'package:newbank/transferencia_sucesso_screen.dart';
 
 class TransferenciaScreen extends StatefulWidget {
-  const TransferenciaScreen({super.key, required this.usuario});
-
   final Usuario usuario;
+
+  const TransferenciaScreen({super.key, required this.usuario});
 
   @override
   State<TransferenciaScreen> createState() => _TransferenciaScreenState();
 }
 
 class _TransferenciaScreenState extends State<TransferenciaScreen> {
+  late final TransferenciaController _controller;
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _pixKeyController = TextEditingController();
-  final TextEditingController _valueController = TextEditingController();
-  final TextEditingController _descriptionController = TextEditingController();
-  final _transacaoRepo = TransacaoRepository();
-  final _usuarioRepo = UsuarioRepository();
-
-  int _currentNavIndex = 2;
-  int _descriptionLength = 0;
-  bool _carregando = false;
-
-  static const Color _green = Color(0xFF1B7A3E);
-  static const Color _lightGreen = Color(0xFFE8F5EE);
-  static const Color _borderColor = Color(0xFFDDE3E8);
-  static const Color _labelColor = Color(0xFF6B7280);
-  static const Color _hintColor = Color(0xFFADB5BD);
+  
+  final _pixKeyController = TextEditingController();
+  final _valueController = TextEditingController();
+  final _descriptionController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
+    _controller = TransferenciaController(
+      transacaoRepo: TransacaoRepository(),
+      usuario: widget.usuario,
+    );
     _valueController.text = 'R\$ 0,00';
-    _descriptionController.addListener(() {
-      setState(() {
-        _descriptionLength = _descriptionController.text.length;
-      });
-    });
+    
+    _controller.addListener(_onControllerUpdate);
   }
 
   @override
   void dispose() {
+    _controller.removeListener(_onControllerUpdate);
+    _controller.dispose();
     _pixKeyController.dispose();
     _valueController.dispose();
     _descriptionController.dispose();
     super.dispose();
   }
 
-  Future<void> _fazerTransferencia() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    String valorStr = _valueController.text
-        .replaceAll('R\$ ', '')
-        .replaceAll('.', '')
-        .replaceAll(',', '.');
-    final valor = double.tryParse(valorStr) ?? 0;
-    if (valor <= 0) {
-      _mostrarErro('Valor inválido');
-      return;
+  void _onControllerUpdate() {
+    if (_controller.errorMessage != null) {
+      DialogHelper.showError(context, _controller.errorMessage!);
     }
-
-    final emailDest = _pixKeyController.text.trim();
-    if (emailDest.isEmpty) {
-      _mostrarErro('Informe a chave Pix');
-      return;
-    }
-
-    setState(() => _carregando = true);
-
-    try {
-      final destinatario = await _usuarioRepo.findByEmail(emailDest);
-      if (destinatario == null) {
-        _mostrarErro('Destinatário não encontrado com a chave informada.');
-        return;
-      }
-
-      if (destinatario.id == widget.usuario.id) {
-        _mostrarErro('Não é possível transferir para si mesmo.');
-        return;
-      }
-
-      final transacao = Transacao(
-        usuarioId: widget.usuario.id!,
-        destinatarioId: destinatario.id!,
-        tipo: TipoTransacao.transferencia,
-        valor: valor,
-        dataHora: DateTime.now(),
-        descricao: _descriptionController.text.trim(),
-      );
-
-      await _transacaoRepo.insert(transacao);
-
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Transferência de ${CurrencyFormatter.format(valor)} '
-            'para ${destinatario.nomeCompleto} realizada!',
+    if (_controller.success) {
+      Navigator.pop(context, true);
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => TransferenciaSucessoScreen(
+            chavePix: _pixKeyController.text.trim(),
           ),
-          backgroundColor: Colors.green,
         ),
       );
-
-      _pixKeyController.clear();
-      _valueController.text = 'R\$ 0,00';
-      _descriptionController.clear();
-
-      Navigator.pop(context, true);
-    } on SaldoInsuficienteException {
-      _mostrarErro('Saldo insuficiente para esta transferência.');
-    } catch (e) {
-      _mostrarErro(e.toString().replaceAll('Exception: ', ''));
-    } finally {
-      if (mounted) setState(() => _carregando = false);
     }
   }
 
-  void _mostrarErro(String mensagem) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(mensagem), backgroundColor: Colors.red),
+  Future<void> _fazerTransferencia() async {
+    if (!_formKey.currentState!.validate()) return;
+    
+    await _controller.realizarTransferencia(
+      chavePix: _pixKeyController.text,
+      valorStr: _valueController.text,
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? Colors.black : theme.colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: isDark ? Colors.black : theme.colorScheme.surface,
-        elevation: 0,
-        systemOverlayStyle: isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
         leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back_ios,
-            color: isDark ? Colors.white : Colors.black87,
-            size: 20,
-          ),
+          icon: const Icon(Icons.arrow_back_ios, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text(
-          'Transferência',
-          style: TextStyle(
-            color: isDark ? Colors.white : Colors.black87,
-            fontSize: 17,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        centerTitle: true,
+        title: const Text('Transferência'),
       ),
-      body: _buildPixTab(theme, isDark),
-      bottomNavigationBar: _buildBottomNavBar(theme, isDark),
-    );
-  }
-
-  Widget _buildPixTab(ThemeData theme, bool isDark) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildFieldLabel('Saldo atual', isDark),
-            const SizedBox(height: 8),
-            _buildBalanceField(theme, isDark),
-            const SizedBox(height: 20),
-            _buildFieldLabel('Chave Pix', isDark),
-            const SizedBox(height: 8),
-            _buildPixKeyField(theme, isDark),
-            const SizedBox(height: 20),
-            _buildFieldLabel('Nome do recebedor', isDark),
-            const SizedBox(height: 8),
-            _buildReadOnlyField('Será exibido automaticamente', theme, isDark),
-            const SizedBox(height: 20),
-            _buildFieldLabel('Valor', isDark),
-            const SizedBox(height: 8),
-            _buildValueField(theme, isDark),
-            const SizedBox(height: 20),
-            _buildFieldLabel('Descrição (opcional)', isDark),
-            const SizedBox(height: 8),
-            _buildDescriptionField(theme, isDark),
-            const SizedBox(height: 32),
-            _buildTransferButton(),
-            const SizedBox(height: 16),
-            _buildSecurityBadge(isDark),
-            const SizedBox(height: 16),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFieldLabel(String label, bool isDark) {
-    return Text(
-      label,
-      style: TextStyle(
-        color: isDark ? Colors.white70 : Colors.black87,
-        fontSize: 14,
-        fontWeight: FontWeight.w500,
-      ),
-    );
-  }
-
-  Widget _buildBalanceField(ThemeData theme, bool isDark) {
-    return Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: isDark ? Colors.white12 : _borderColor),
-        borderRadius: BorderRadius.circular(10),
-        color: isDark ? Colors.black : const Color(0xFFF9FAFB),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-      child: SizedBox(
-        width: double.infinity,
-        child: Text(
-          'R\$ ${CurrencyFormatter.format(widget.usuario.saldo)}',
-          style: TextStyle(
-            color: isDark ? Colors.white : Colors.black87,
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPixKeyField(ThemeData theme, bool isDark) {
-    return Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: isDark ? Colors.white12 : _borderColor),
-        borderRadius: BorderRadius.circular(10),
-        color: isDark ? Colors.black : Colors.transparent,
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextFormField(
-              controller: _pixKeyController,
-              style: TextStyle(fontSize: 14, color: isDark ? Colors.white : Colors.black87),
-              decoration: InputDecoration(
-                hintText: 'CPF, e-mail, telefone ou chave aleatória',
-                hintStyle: TextStyle(color: isDark ? Colors.white38 : _hintColor, fontSize: 13),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 14,
-                ),
-                border: InputBorder.none,
+      body: ListenableBuilder(
+        listenable: _controller,
+        builder: (context, child) {
+          return SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Saldo atual',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(height: 8),
+                  _buildBalanceCard(isDark),
+                  const SizedBox(height: 20),
+                  CustomTextField(
+                    controller: _pixKeyController,
+                    label: 'Chave Pix',
+                    hintText: 'CPF, CNPJ, e-mail ou telefone',
+                    suffixIcon: const Icon(Icons.qr_code_scanner, color: AppColors.primary, size: 22),
+                    validator: (val) {
+                      if (val == null || val.trim().isEmpty) return 'Informe a chave Pix';
+                      if (!_controller.isValidaChavePix(val)) return 'Formato inválido';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 20),
+                  CustomTextField(
+                    controller: _valueController,
+                    label: 'Valor',
+                    keyboardType: TextInputType.number,
+                    onTap: () {
+                      if (_valueController.text == 'R\$ 0,00') _valueController.clear();
+                    },
+                    validator: (val) {
+                      if (val == null || val.isEmpty || val == 'R\$ 0,00') return 'Informe um valor válido';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 20),
+                  CustomTextField(
+                    controller: _descriptionController,
+                    label: 'Descrição (opcional)',
+                    hintText: 'Ex: Aluguel, pagamento...',
+                    maxLength: 50,
+                  ),
+                  const SizedBox(height: 32),
+                  PrimaryButton(
+                    label: 'Transferir',
+                    isLoading: _controller.loading,
+                    onPressed: _fazerTransferencia,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildSecurityBadge(isDark),
+                  const SizedBox(height: 24),
+                  const Center(
+                    child: Text(
+                      'Recurso simulado',
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                  ),
+                ],
               ),
-              validator: (val) {
-                if (val == null || val.trim().isEmpty) {
-                  return 'Informe a chave Pix';
-                }
-                return null;
-              },
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: Icon(Icons.qr_code_scanner, color: _green, size: 22),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildReadOnlyField(String hint, ThemeData theme, bool isDark) {
-    return Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: isDark ? Colors.white12 : _borderColor),
-        borderRadius: BorderRadius.circular(10),
-        color: isDark ? Colors.black : const Color(0xFFF9FAFB),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-      child: SizedBox(
-        width: double.infinity,
-        child: Text(
-          hint,
-          style: TextStyle(color: isDark ? Colors.white38 : _hintColor, fontSize: 13),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildValueField(ThemeData theme, bool isDark) {
-    return Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: isDark ? Colors.white12 : _borderColor),
-        borderRadius: BorderRadius.circular(10),
-        color: isDark ? Colors.black : Colors.transparent,
-      ),
-      child: TextFormField(
-        controller: _valueController,
-        keyboardType: TextInputType.number,
-        style: TextStyle(
-          fontSize: 16,
-          color: isDark ? Colors.white : Colors.black87,
-          fontWeight: FontWeight.w500,
-        ),
-        decoration: const InputDecoration(
-          contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-          border: InputBorder.none,
-        ),
-        onTap: () {
-          if (_valueController.text == 'R\$ 0,00') {
-            _valueController.clear();
-          }
+          );
         },
-        validator: (val) {
-          if (val == null || val.isEmpty || val == 'R\$ 0,00') {
-            return 'Informe um valor válido';
-          }
-          return null;
+      ),
+      bottomNavigationBar: CustomBottomNavBar(
+        currentIndex: 2,
+        onTap: (i) {
+          if (i == 2) return;
+          Navigator.pop(context);
         },
       ),
     );
   }
 
-  Widget _buildDescriptionField(ThemeData theme, bool isDark) {
+  Widget _buildBalanceCard(bool isDark) {
     return Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: isDark ? Colors.white12 : _borderColor),
-        borderRadius: BorderRadius.circular(10),
-        color: isDark ? Colors.black : Colors.transparent,
-      ),
-      child: Stack(
-        children: [
-          TextFormField(
-            controller: _descriptionController,
-            maxLength: 50,
-            style: TextStyle(fontSize: 14, color: isDark ? Colors.white : Colors.black87),
-            decoration: InputDecoration(
-              hintText: 'Ex: Aluguel, pagamento...',
-              hintStyle: TextStyle(color: isDark ? Colors.white38 : _hintColor, fontSize: 13),
-              contentPadding: const EdgeInsets.fromLTRB(14, 14, 50, 14),
-              border: InputBorder.none,
-              counterText: '',
-            ),
-          ),
-          Positioned(
-            right: 12,
-            top: 0,
-            bottom: 0,
-            child: Center(
-              child: Text(
-                '$_descriptionLength/50',
-                style: TextStyle(color: isDark ? Colors.white38 : _hintColor, fontSize: 11),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTransferButton() {
-    return SizedBox(
       width: double.infinity,
-      height: 52,
-      child: ElevatedButton(
-        onPressed: _carregando ? null : _fazerTransferencia,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: _green,
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          elevation: 0,
-        ),
-        child: _carregando
-            ? const CircularProgressIndicator(color: Colors.white)
-            : const Text(
-                'Transferir',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.3,
-                ),
-              ),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        border: Border.all(color: isDark ? Colors.white12 : AppColors.border),
+        borderRadius: BorderRadius.circular(10),
+        color: isDark ? Colors.black : AppColors.card,
+      ),
+      child: Text(
+        'R\$ ${CurrencyFormatter.format(widget.usuario.saldo)}',
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
       ),
     );
   }
 
   Widget _buildSecurityBadge(bool isDark) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? Colors.transparent : _lightGreen,
+        color: isDark ? Colors.transparent : AppColors.primaryExtraLight,
         borderRadius: BorderRadius.circular(12),
         border: isDark ? Border.all(color: Colors.white12) : null,
       ),
-      child: Row(
+      child: const Row(
         children: [
-          const Icon(Icons.shield_outlined, color: _green, size: 22),
-          const SizedBox(width: 12),
+          Icon(Icons.shield_outlined, color: AppColors.primary, size: 22),
+          SizedBox(width: 12),
           Expanded(
             child: Text(
               'Suas transações são protegidas\ncom segurança de ponta a ponta.',
-              style: TextStyle(
-                color: isDark ? Colors.white70 : const Color(0xFF1B5E34),
-                fontSize: 12.5,
-                height: 1.5,
-              ),
+              style: TextStyle(fontSize: 12, height: 1.5),
             ),
           ),
         ],
       ),
     );
   }
-
-  Widget _buildBottomNavBar(ThemeData theme, bool isDark) {
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? Colors.black : theme.colorScheme.surface,
-        border: Border(top: BorderSide(color: isDark ? Colors.white12 : _borderColor, width: 1)),
-      ),
-      child: BottomNavigationBar(
-        currentIndex: _currentNavIndex,
-        onTap: (i) async {
-          setState(() => _currentNavIndex = i);
-          switch (i) {
-            case 0:
-              Navigator.pop(context);
-              break;
-            case 1:
-              await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => CotacaoScreen(usuario: widget.usuario),
-                ),
-              );
-              break;
-            case 2:
-              // Já estamos na tela de transferência
-              break;
-            case 3:
-              await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => ExtratoScreen(usuario: widget.usuario),
-                ),
-              );
-              break;
-          }
-        },
-        selectedItemColor: _green,
-        unselectedItemColor: isDark ? Colors.white38 : _labelColor,
-        selectedLabelStyle: const TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-        ),
-        unselectedLabelStyle: const TextStyle(fontSize: 11),
-        backgroundColor: isDark ? Colors.black : theme.colorScheme.surface,
-        elevation: 0,
-        type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_rounded, size: 24),
-            label: 'Início',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.currency_exchange_rounded, size: 24),
-            label: 'Conversor',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.swap_horiz_rounded, size: 24),
-            label: 'Transferir',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.receipt_long_rounded, size: 24),
-            label: 'Extrato',
-          ),
-        ],
-      ),
-    );
-  }
 }
-

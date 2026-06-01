@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:newbank/controllers/home_controller.dart';
 import 'package:newbank/models/tipo_conta.dart';
-import 'package:newbank/models/transacao.dart';
 import 'package:newbank/models/tipo_transacao.dart';
 import 'package:newbank/models/usuario.dart';
 import 'package:newbank/repositories/transacao_repository.dart';
@@ -11,57 +11,49 @@ import 'package:newbank/landing_page.dart';
 import 'package:newbank/transferencia_screen.dart';
 import 'package:newbank/cotacao_screen.dart';
 import 'package:newbank/extrato_screen.dart';
+import 'package:newbank/meus_dados_screen.dart';
+import 'package:newbank/configuracoes_conta_screen.dart';
+import 'package:newbank/theme/app_colors.dart';
+import 'package:newbank/widgets/custom_bottom_nav_bar.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key, required this.usuario});
-
   final Usuario usuario;
+
+  const HomeScreen({super.key, required this.usuario});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  late final HomeController _controller;
   int _currentIndex = 0;
   bool _saldoVisivel = true;
-
-  late Usuario _usuario;
-  List<Transacao> _transacoes = [];
-  double _totalEntradas = 0;
-  double _totalSaidas = 0;
-
-  final _usuarioRepo = UsuarioRepository();
-  final _transacaoRepo = TransacaoRepository();
-  final _secureStorage = SecureStorageService();
-
-  static const Color verde = Color(0xFF1B8C3E);
-  static const Color verdeBackground = Color(0xFFEAF7EE);
 
   @override
   void initState() {
     super.initState();
-    _usuario = widget.usuario;
-    _carregarDados();
-  }
-
-  Future<void> _carregarDados() async {
-    if (_usuario.id == null) return;
-
-    final usuario = await _usuarioRepo.findById(_usuario.id!);
-    final transacoes = await _transacaoRepo.findByUsuarioId(_usuario.id!);
-    final resumo = await _transacaoRepo.calcularResumo(_usuario.id!);
-
-    if (!mounted) return;
-    setState(() {
-      if (usuario != null) _usuario = usuario;
-      _transacoes = transacoes;
-      _totalEntradas = resumo['entradas'] ?? 0;
-      _totalSaidas = resumo['saidas'] ?? 0;
+    _controller = HomeController(
+      usuarioRepo: UsuarioRepository(),
+      transacaoRepo: TransacaoRepository(),
+      usuario: widget.usuario,
+    );
+    _controller.carregarDados().then((_) {
+      if (_controller.usuario.saldo == 0 && !_controller.promptDepositoMostrado) {
+        _controller.setPromptMostrado(true);
+        _exibirPromptDeposito();
+      }
     });
   }
 
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
   Future<void> _fazerLogout() async {
-    await _secureStorage.clearLastLoggedUserId();
+    await SecureStorageService().clearLastLoggedUserId();
     if (!mounted) return;
     Navigator.pushAndRemoveUntil(
       context,
@@ -70,126 +62,142 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Future<void> _navegarTransferencia() async {
-    final atualizou = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => TransferenciaScreen(usuario: _usuario),
-      ),
-    );
-    if (atualizou == true) {
-      await _carregarDados();
-    }
-  }
-
-  Future<void> _navegarCotacao() async {
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => CotacaoScreen(usuario: _usuario),
-      ),
-    );
-  }
-
-  Future<void> _navegarExtrato() async {
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => ExtratoScreen(usuario: _usuario),
-      ),
-    );
-  }
-
-  void _mostrarEmBreve() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Funcionalidade em breve!'),
-        behavior: SnackBarBehavior.floating,
-        duration: Duration(seconds: 1),
+  void _exibirPromptDeposito() {
+    final valController = TextEditingController();
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('Boas-vindas!'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Sua conta está zerada, você deseja depositar um valor?'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: valController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Valor do depósito',
+                prefixText: 'R\$ ',
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text('Recurso simulado', style: TextStyle(fontSize: 11, color: Colors.grey)),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Agora não')),
+          ElevatedButton(
+            onPressed: () async {
+              final valor = double.tryParse(valController.text) ?? 0;
+              await _controller.realizarDeposito(valor);
+              if (context.mounted) Navigator.pop(context);
+            },
+            child: const Text('Depositar'),
+          ),
+        ],
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? Colors.black : const Color(0xFFF5F5F5),
-      drawer: _buildDrawer(theme, isDark),
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(theme, isDark),
-            Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    const SizedBox(height: 16),
-                    _buildAtalhos(theme, isDark),
-                    const SizedBox(height: 16),
-                    _buildSegurancaBanner(theme, isDark),
-                    const SizedBox(height: 24),
-                    _buildResumo(theme, isDark),
-                    const SizedBox(height: 16),
-                    _buildMovimentacoes(theme, isDark),
-                    const SizedBox(height: 24),
-                  ],
+      drawer: _buildDrawer(isDark),
+      body: ListenableBuilder(
+        listenable: _controller,
+        builder: (context, child) {
+          return SafeArea(
+            child: Column(
+              children: [
+                _buildHeader(isDark),
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 16),
+                        _buildAtalhos(isDark),
+                        const SizedBox(height: 16),
+                        _buildSegurancaBanner(isDark),
+                        const SizedBox(height: 24),
+                        _buildResumo(isDark),
+                        const SizedBox(height: 16),
+                        _buildMovimentacoes(isDark),
+                        const SizedBox(height: 24),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
+          );
+        },
       ),
-      bottomNavigationBar: _buildBottomNav(theme, isDark),
+      bottomNavigationBar: CustomBottomNavBar(
+        currentIndex: _currentIndex,
+        onTap: (i) async {
+          if (i == _currentIndex) return;
+
+          setState(() => _currentIndex = i);
+
+          switch (i) {
+            case 1:
+              await Navigator.push(context, MaterialPageRoute(builder: (_) => CotacaoScreen(usuario: _controller.usuario)));
+              setState(() => _currentIndex = 0);
+              break;
+            case 2:
+              await _navegarTransferencia();
+              setState(() => _currentIndex = 0);
+              break;
+            case 3:
+              await Navigator.push(context, MaterialPageRoute(builder: (_) => ExtratoScreen(usuario: _controller.usuario)));
+              setState(() => _currentIndex = 0);
+              break;
+          }
+        },
+      ),
     );
   }
 
-  Widget _buildDrawer(ThemeData theme, bool isDark) {
+  Widget _buildDrawer(bool isDark) {
     return Drawer(
-      backgroundColor: isDark ? Colors.black : Colors.white,
       child: Column(
         children: [
           UserAccountsDrawerHeader(
-            decoration: const BoxDecoration(color: verde),
-            currentAccountPicture: CircleAvatar(
-              backgroundColor: Colors.white,
-              child: Text(
-                _usuario.nomeCompleto[0].toUpperCase(),
-                style: const TextStyle(
-                  color: verde,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
+            currentAccountPicture: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: Image.asset('assets/images/logo.png', fit: BoxFit.contain),
                 ),
               ),
             ),
-            accountName: Text(
-              _usuario.nomeCompleto,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            accountEmail: Text(_usuario.email),
+            accountName: Text(_controller.usuario.nomeCompleto, style: const TextStyle(fontWeight: FontWeight.bold)),
+            accountEmail: Text(_controller.usuario.email),
           ),
           ListTile(
             leading: const Icon(Icons.person_outline),
             title: const Text('Meus Dados'),
-            onTap: () => Navigator.pop(context),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(context, MaterialPageRoute(builder: (_) => MeusDadosScreen(usuario: _controller.usuario)));
+            },
           ),
           ListTile(
             leading: const Icon(Icons.account_balance_wallet_outlined),
             title: const Text('Configurações da Conta'),
-            onTap: () => Navigator.pop(context),
-          ),
-          ListTile(
-            leading: const Icon(Icons.security_outlined),
-            title: const Text('Segurança e Privacidade'),
-            onTap: () => Navigator.pop(context),
-          ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.help_outline),
-            title: const Text('Ajuda e Suporte'),
-            onTap: () => Navigator.pop(context),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(context, MaterialPageRoute(builder: (_) => ConfiguracoesContaScreen(usuario: _controller.usuario)));
+            },
           ),
           const Spacer(),
           ListTile(
@@ -203,16 +211,11 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildHeader(ThemeData theme, bool isDark) {
-    final tipoConta = _usuario.tipoConta == TipoConta.corrente
-        ? 'Conta corrente'
-        : 'Conta poupança';
-    final numeroConta = _usuario.numeroConta.isNotEmpty
-        ? '${_usuario.agencia} • ${_usuario.numeroConta}'
-        : _usuario.agencia;
+  Widget _buildHeader(bool isDark) {
+    final tipoConta = _controller.usuario.tipoConta == TipoConta.corrente ? 'Conta corrente' : 'Conta poupança';
 
     return Container(
-      color: verde,
+      color: AppColors.primary,
       padding: const EdgeInsets.fromLTRB(10, 12, 20, 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -220,131 +223,54 @@ class _HomeScreenState extends State<HomeScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Builder(
-                builder: (context) => IconButton(
-                  icon: const Icon(Icons.menu, color: Colors.white, size: 28),
-                  onPressed: () => Scaffold.of(context).openDrawer(),
-                ),
-              ),
-              Stack(
-                children: [
-                  const Icon(
-                    Icons.notifications_outlined,
-                    color: Colors.white,
-                    size: 28,
-                  ),
-                  Positioned(
-                    right: 0,
-                    top: 0,
-                    child: Container(
-                      width: 14,
-                      height: 14,
-                      decoration: const BoxDecoration(
-                        color: Colors.red,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Center(
-                        child: Text(
-                          '1',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 9,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+              Builder(builder: (context) => IconButton(
+                icon: const Icon(Icons.menu, color: Colors.white, size: 28),
+                onPressed: () => Scaffold.of(context).openDrawer(),
+              )),
+              const Icon(Icons.notifications_outlined, color: Colors.white, size: 28),
             ],
           ),
           const SizedBox(height: 16),
           Text(
-            'Olá, ${_usuario.nomeCompleto.split(' ').first}!',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-            ),
+            'Olá, ${_controller.usuario.nomeCompleto.split(' ').first}!',
+            style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
           ),
-          const Text(
-            'Bem-vindo ao NewBank',
-            style: TextStyle(color: Colors.white70, fontSize: 14),
-          ),
+          const Text('Bem-vindo ao NewBank', style: TextStyle(color: Colors.white70, fontSize: 14)),
           const SizedBox(height: 20),
           Container(
-            width: double.infinity,
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               color: isDark ? Colors.black : Colors.white,
               borderRadius: BorderRadius.circular(16),
-              border: isDark ? Border.all(color: Colors.white12) : null,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Saldo disponível',
-                  style: TextStyle(
-                    color: isDark ? Colors.white60 : Colors.black54,
-                    fontSize: 13,
-                  ),
-                ),
+                const Text('Saldo disponível', style: TextStyle(fontSize: 13, color: Colors.grey)),
                 const SizedBox(height: 6),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      _saldoVisivel
-                          ? CurrencyFormatter.format(_usuario.saldo)
-                          : 'R\$ ••••••',
-                      style: TextStyle(
-                        color: isDark ? Colors.white : Colors.black87,
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      _saldoVisivel ? CurrencyFormatter.format(_controller.usuario.saldo) : 'R\$ ••••••',
+                      style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
                     ),
-                    GestureDetector(
-                      onTap: () =>
-                          setState(() => _saldoVisivel = !_saldoVisivel),
-                      child: Icon(
-                        _saldoVisivel
-                            ? Icons.visibility_outlined
-                            : Icons.visibility_off_outlined,
-                        color: isDark ? Colors.white38 : Colors.black45,
-                      ),
+                    IconButton(
+                      icon: Icon(_saldoVisivel ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+                      onPressed: () => setState(() => _saldoVisivel = !_saldoVisivel),
                     ),
                   ],
                 ),
-                Divider(height: 24, color: isDark ? Colors.white10 : null),
+                const Divider(height: 24),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          tipoConta,
-                          style: TextStyle(
-                            color: isDark ? Colors.white60 : Colors.black54,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          numeroConta,
-                          style: TextStyle(
-                            color: isDark ? Colors.white : Colors.black87,
-                            fontSize: 13,
-                          ),
-                        ),
+                        Text(tipoConta, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.grey)),
+                        Text('${_controller.usuario.agencia} • ${_controller.usuario.numeroConta}', style: const TextStyle(fontSize: 13)),
                       ],
-                    ),
-                    Icon(
-                      Icons.chevron_right,
-                      color: isDark ? Colors.white38 : Colors.black45,
                     ),
                   ],
                 ),
@@ -356,483 +282,129 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildAtalhos(ThemeData theme, bool isDark) {
+  Widget _buildAtalhos(bool isDark) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            'Atalhos',
-            style: TextStyle(
-              color: isDark ? Colors.white : Colors.black87,
-              fontSize: 17,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 14),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildAtalhoItem(
-                Icons.swap_horiz_rounded,
-                'Transferência',
-                _navegarTransferencia,
-                theme,
-                isDark,
-              ),
-              _buildAtalhoItem(Icons.pix, 'Pix', _mostrarEmBreve, theme, isDark),
-              _buildAtalhoItem(
-                Icons.bar_chart_rounded,
-                'Cotação',
-                _navegarCotacao,
-                theme,
-                isDark,
-              ),
-              _buildAtalhoItem(
-                Icons.receipt_long_outlined,
-                'Extrato',
-                _navegarExtrato,
-                theme,
-                isDark,
-              ),
-            ],
-          ),
+          _buildAtalhoItem(Icons.pix, 'Pix', () => _navegarTransferencia()),
+          _buildAtalhoItem(Icons.swap_horiz_rounded, 'Transferir', () => _navegarTransferencia()),
+          _buildAtalhoItem(Icons.bar_chart_rounded, 'Cotação', () => Navigator.push(context, MaterialPageRoute(builder: (_) => CotacaoScreen(usuario: _controller.usuario)))),
+          _buildAtalhoItem(Icons.receipt_long_outlined, 'Extrato', () => Navigator.push(context, MaterialPageRoute(builder: (_) => ExtratoScreen(usuario: _controller.usuario)))),
         ],
       ),
     );
   }
 
-  Widget _buildAtalhoItem(
-    IconData icon,
-    String label,
-    VoidCallback onTap,
-    ThemeData theme,
-    bool isDark,
-  ) {
+  Widget _buildAtalhoItem(IconData icon, String label, VoidCallback onTap) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return GestureDetector(
       onTap: onTap,
       child: Column(
         children: [
           Container(
-            width: 62,
-            height: 62,
+            width: 62, height: 62,
             decoration: BoxDecoration(
-              color: isDark ? Colors.black : Colors.white,
+              color: isDark ? Colors.grey[900] : Colors.white,
               borderRadius: BorderRadius.circular(14),
-              border: isDark ? Border.all(color: Colors.white12) : null,
-              boxShadow: isDark ? null : [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.07),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+              boxShadow: isDark ? null : [BoxShadow(color: Colors.black12, blurRadius: 8, offset: const Offset(0, 2))],
             ),
-            child: Icon(icon, color: verde, size: 28),
+            child: Icon(icon, color: AppColors.primary, size: 28),
           ),
           const SizedBox(height: 8),
-          Text(
-            label,
-            style: TextStyle(
-              color: isDark ? Colors.white70 : Colors.black87,
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
+          Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
         ],
       ),
     );
   }
 
-  Widget _buildSegurancaBanner(ThemeData theme, bool isDark) {
+  Widget _buildSegurancaBanner(bool isDark) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isDark ? Colors.transparent : verdeBackground,
+          color: isDark ? Colors.grey[900] : AppColors.primaryLight,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: isDark ? Colors.white12 : verde.withOpacity(0.15)),
         ),
-        child: Row(
+        child: const Row(
           children: [
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color: verde.withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.verified_user_outlined,
-                color: verde,
-                size: 22,
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Seu dinheiro protegido',
-                    style: TextStyle(
-                      color: isDark ? Colors.white : Colors.black87,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Suas transações são protegidas com segurança de ponta a ponta.',
-                    style: TextStyle(
-                      color: isDark ? Colors.white60 : Colors.black54,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(Icons.chevron_right, color: isDark ? Colors.white38 : Colors.black45),
+            Icon(Icons.verified_user_outlined, color: AppColors.primary),
+            SizedBox(width: 14),
+            Expanded(child: Text('Seu dinheiro protegido com segurança de ponta a ponta.', style: TextStyle(fontSize: 12))),
           ],
         ),
       ),
     );
   }
 
-  // Resumo de entradas e saídas — dados reais do banco
-  Widget _buildResumo(ThemeData theme, bool isDark) {
+  Widget _buildResumo(bool isDark) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Container(
-        width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          color: isDark ? Colors.black : Colors.white,
+          color: isDark ? Colors.grey[900] : Colors.white,
           borderRadius: BorderRadius.circular(14),
-          border: isDark ? Border.all(color: Colors.white12) : null,
-          boxShadow: isDark ? null : [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            _buildResumoItem(
-              'Entradas',
-              '+ ${CurrencyFormatter.format(_totalEntradas)}',
-              true,
-              isDark,
-            ),
-            Container(
-              width: 1,
-              height: 40,
-              color: isDark ? Colors.white10 : Colors.grey.shade200,
-            ),
-            _buildResumoItem(
-              'Saídas',
-              '- ${CurrencyFormatter.format(_totalSaidas)}',
-              false,
-              isDark,
-            ),
+            _buildResumoItem('Entradas', '+ ${CurrencyFormatter.format(_controller.totalEntradas)}', true),
+            const VerticalDivider(),
+            _buildResumoItem('Saídas', '- ${CurrencyFormatter.format(_controller.totalSaidas)}', false),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildResumoItem(String label, String valor, bool positivo, bool isDark) {
+  Widget _buildResumoItem(String label, String valor, bool positivo) {
     return Column(
       children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: isDark ? Colors.white60 : Colors.black54,
-            fontSize: 12,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          valor,
-          style: TextStyle(
-            color: positivo ? verde : (isDark ? Colors.white : Colors.black87),
-            fontWeight: FontWeight.bold,
-            fontSize: 15,
-          ),
-        ),
+        Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+        Text(valor, style: TextStyle(color: positivo ? AppColors.primary : Colors.red, fontWeight: FontWeight.bold, fontSize: 15)),
       ],
     );
   }
 
-  IconData _iconeParaTipo(TipoTransacao tipo) {
-    switch (tipo) {
-      case TipoTransacao.transferencia:
-        return Icons.swap_horiz_rounded;
-      case TipoTransacao.deposito:
-        return Icons.arrow_downward_rounded;
-      case TipoTransacao.saque:
-        return Icons.arrow_upward_rounded;
-    }
-  }
-
-  String _labelParaTipo(TipoTransacao tipo) {
-    switch (tipo) {
-      case TipoTransacao.transferencia:
-        return 'Transferência';
-      case TipoTransacao.deposito:
-        return 'Depósito';
-      case TipoTransacao.saque:
-        return 'Saque';
-    }
-  }
-
-  /// Determina se a transação é positiva (entrada) para o usuário atual.
-  bool _isEntrada(Transacao t) {
-    if (t.tipo == TipoTransacao.deposito) return true;
-    if (t.tipo == TipoTransacao.transferencia &&
-        t.destinatarioId == _usuario.id) {
-      return true;
-    }
-    return false;
-  }
-
-  Widget _buildMovimentacoes(ThemeData theme, bool isDark) {
+  Widget _buildMovimentacoes(bool isDark) {
+    if (_controller.transacoes.isEmpty) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column( crossAxisAlignment: CrossAxisAlignment.start,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Últimas movimentações',
-            style: TextStyle(
-              color: isDark ? Colors.white : Colors.black87,
-              fontSize: 17,
-              fontWeight: FontWeight.bold,
+          const Text('Últimas movimentações', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 12),
+          Container(
+            decoration: BoxDecoration(
+              color: isDark ? Colors.grey[900] : Colors.white,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Column(
+              children: _controller.transacoes.take(5).map((t) => ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: t.tipo == TipoTransacao.deposito ? AppColors.primaryLight : Colors.red[50],
+                  child: Icon(t.tipo == TipoTransacao.deposito ? Icons.arrow_downward : Icons.arrow_upward, color: t.tipo == TipoTransacao.deposito ? AppColors.primary : Colors.red, size: 20),
+                ),
+                title: Text(t.tipo == TipoTransacao.deposito ? 'Depósito' : 'Transferência', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                subtitle: Text(t.descricao ?? '', style: const TextStyle(fontSize: 12)),
+                trailing: Text(
+                  '${t.tipo == TipoTransacao.deposito ? '+' : '-'} ${CurrencyFormatter.format(t.valor)}',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: t.tipo == TipoTransacao.deposito ? AppColors.primary : Colors.black),
+                ),
+              )).toList(),
             ),
           ),
-          const SizedBox(height: 12),
-          if (_transacoes.isEmpty)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(32),
-              decoration: BoxDecoration(
-                color: isDark ? Colors.black : Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                border: isDark ? Border.all(color: Colors.white12) : null,
-                boxShadow: isDark ? null : [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  Icon(
-                    Icons.inbox_outlined,
-                    color: isDark ? Colors.white24 : Colors.black26,
-                    size: 48,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Nenhuma movimentação ainda',
-                    style: TextStyle(
-                      color: isDark ? Colors.white38 : Colors.black45,
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
-              ),
-            )
-          else
-            Container(
-              decoration: BoxDecoration(
-                color: isDark ? Colors.black : Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                border: isDark ? Border.all(color: Colors.white12) : null,
-                boxShadow: isDark ? null : [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: _transacoes.asMap().entries.map((entry) {
-                  final i = entry.key;
-                  final t = entry.value;
-                  final positivo = _isEntrada(t);
-                  final icone = _iconeParaTipo(t.tipo);
-                  final titulo = _labelParaTipo(t.tipo);
-                  final dataStr =
-                      '${t.dataHora.toLocal().day.toString().padLeft(2, '0')}/'
-                      '${t.dataHora.toLocal().month.toString().padLeft(2, '0')}/'
-                      '${t.dataHora.toLocal().year}';
-                  final valorStr = positivo
-                      ? '+ ${CurrencyFormatter.format(t.valor)}'
-                      : '- ${CurrencyFormatter.format(t.valor)}';
-
-                  return Column(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 14,
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 42,
-                              height: 42,
-                              decoration: BoxDecoration(
-                                color: positivo
-                                    ? verde.withOpacity(0.1)
-                                    : Colors.red.withOpacity(0.08),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                icone,
-                                color: positivo
-                                    ? verde
-                                    : Colors.red.shade300,
-                                size: 20,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    titulo,
-                                    style: TextStyle(
-                                      color: isDark ? Colors.white : Colors.black87,
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 3),
-                                  Text(
-                                    dataStr,
-                                    style: TextStyle(
-                                      color: isDark ? Colors.white38 : Colors.black45,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Text(
-                              valorStr,
-                              style: TextStyle(
-                                color: positivo ? verde : (isDark ? Colors.white : Colors.black87),
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (i < _transacoes.length - 1)
-                        Divider(
-                          height: 1,
-                          indent: 16,
-                          endIndent: 16,
-                          color: isDark ? Colors.white10 : null,
-                        ),
-                    ],
-                  );
-                }).toList(),
-              ),
-            ),
         ],
       ),
     );
   }
 
-  Widget _buildBottomNav(ThemeData theme, bool isDark) {
-    final items = [
-      {'icon': Icons.home_rounded, 'label': 'Início', 'action': 'home'},
-      {'icon': Icons.currency_exchange_rounded, 'label': 'Conversor', 'action': 'cotacao'},
-      {
-        'icon': Icons.swap_horiz_rounded,
-        'label': 'Transferir',
-        'action': 'transfer',
-      },
-      {
-        'icon': Icons.receipt_long_rounded,
-        'label': 'Extrato',
-        'action': 'extrato',
-      },
-    ];
-
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? Colors.black : Colors.white,
-        border: isDark ? const Border(top: BorderSide(color: Colors.white12)) : null,
-        boxShadow: isDark ? null : [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: items.asMap().entries.map((entry) {
-              final i = entry.key;
-              final item = entry.value;
-              final selected = i == _currentIndex;
-              return GestureDetector(
-                onTap: () async {
-                  setState(() => _currentIndex = i);
-                  final action = item['action'] as String;
-                  if (action == 'transfer') {
-                    await _navegarTransferencia();
-                  } else if (action == 'cotacao') {
-                    await _navegarCotacao();
-                  } else if (action == 'extrato') {
-                    await _navegarExtrato();
-                  } else if (action == 'soon') {
-                    _mostrarEmBreve();
-                  }
-                },
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      item['icon'] as IconData,
-                      color: selected ? verde : (isDark ? Colors.white38 : Colors.black38),
-                      size: 26,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      item['label'] as String,
-                      style: TextStyle(
-                        color: selected ? verde : (isDark ? Colors.white38 : Colors.black38),
-                        fontSize: 11,
-                        fontWeight: selected
-                            ? FontWeight.w600
-                            : FontWeight.normal,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }).toList(),
-          ),
-        ),
-      ),
-    );
+  Future<void> _navegarTransferencia() async {
+    final refresh = await Navigator.push(context, MaterialPageRoute(builder: (_) => TransferenciaScreen(usuario: _controller.usuario)));
+    if (refresh == true) await _controller.carregarDados();
   }
 }

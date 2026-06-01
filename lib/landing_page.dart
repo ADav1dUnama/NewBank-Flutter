@@ -28,13 +28,13 @@ class LandingPage extends StatelessWidget {
             child: Column(
               children: [
                 const Spacer(flex: 2),
-                // Logo 'N'
+                // Logo NewBank
                 Container(
-                  width: 80,
-                  height: 80,
+                  width: 100,
+                  height: 100,
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(24),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withOpacity(0.1),
@@ -43,13 +43,13 @@ class LandingPage extends StatelessWidget {
                       ),
                     ],
                   ),
-                  child: const Center(
-                    child: Text(
-                      'N',
-                      style: TextStyle(
-                        color: Color(0xFF1B7A3E),
-                        fontSize: 48,
-                        fontWeight: FontWeight.bold,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(24),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Image.asset(
+                        'assets/images/logo.png',
+                        fit: BoxFit.contain,
                       ),
                     ),
                   ),

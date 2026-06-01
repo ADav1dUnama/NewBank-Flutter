@@ -5,6 +5,7 @@ import 'package:newbank/models/usuario.dart';
 import 'package:newbank/repositories/usuario_repository.dart';
 import 'package:newbank/services/secure_storage_service.dart';
 import 'package:newbank/biometric_lock_screen.dart';
+import 'package:newbank/theme/app_theme.dart';
 import 'landing_page.dart';
 
 Future<void> _seedDatabase() async {
@@ -45,20 +46,8 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'NewBank',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
-        useMaterial3: true,
-      ),
-      darkTheme: ThemeData(
-        brightness: Brightness.dark,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.green,
-          brightness: Brightness.dark,
-          surface: Colors.black,
-        ),
-        scaffoldBackgroundColor: Colors.black,
-        useMaterial3: true,
-      ),
+      theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
       themeMode: ThemeMode.system,
       home: initialUserId != null
           ? BiometricLockScreen(userId: initialUserId!)
