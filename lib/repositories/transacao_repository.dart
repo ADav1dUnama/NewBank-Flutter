@@ -41,9 +41,9 @@ class TransacaoRepository {
         throw TransacaoUsuarioNotFoundException(transacao.usuarioId);
       }
 
-      final double saldoAtual =
-          (userRows.first[DatabaseConstants.colSaldo] as num).toDouble();
-      double novoSaldo = saldoAtual;
+      final int saldoAtual =
+          (userRows.first[DatabaseConstants.colSaldo] as num).toInt();
+      int novoSaldo = saldoAtual;
 
       if (transacao.tipo == TipoTransacao.deposito) {
         novoSaldo += transacao.valor;
@@ -82,8 +82,8 @@ class TransacaoRepository {
           );
         }
 
-        final double saldoDest =
-            (destRows.first[DatabaseConstants.colSaldo] as num).toDouble();
+        final int saldoDest =
+            (destRows.first[DatabaseConstants.colSaldo] as num).toInt();
 
         await txn.update(
           DatabaseConstants.tableUsuarios,
@@ -117,8 +117,8 @@ class TransacaoRepository {
     final db = await _database.database;
     final rows = await db.query(
       DatabaseConstants.tableTransacoes,
-      where: '${DatabaseConstants.colUsuarioId} = ?',
-      whereArgs: [usuarioId],
+      where: '${DatabaseConstants.colUsuarioId} = ? OR ${DatabaseConstants.colDestinatarioId} = ?',
+      whereArgs: [usuarioId, usuarioId],
       orderBy: '${DatabaseConstants.colDataHora} DESC',
     );
     return rows.map(Transacao.fromMap).toList();
@@ -126,7 +126,7 @@ class TransacaoRepository {
 
   /// Calcula o total de entradas (depósitos + transferências recebidas)
   /// e saídas (saques + transferências enviadas) de um usuário.
-  Future<Map<String, double>> calcularResumo(int usuarioId) async {
+  Future<Map<String, int>> calcularResumo(int usuarioId) async {
     final db = await _database.database;
 
     // Entradas: depósitos feitos pelo usuário
@@ -137,7 +137,7 @@ class TransacaoRepository {
       "AND ${DatabaseConstants.colTipo} = 'deposito'",
       [usuarioId],
     );
-    final totalDepositos = (depositoRows.first['total'] as num).toDouble();
+    final totalDepositos = (depositoRows.first['total'] as num).toInt();
 
     // Entradas: transferências recebidas (onde o usuário é destinatário)
     final recebidoRows = await db.rawQuery(
@@ -147,7 +147,7 @@ class TransacaoRepository {
       "AND ${DatabaseConstants.colTipo} = 'transferencia'",
       [usuarioId],
     );
-    final totalRecebido = (recebidoRows.first['total'] as num).toDouble();
+    final totalRecebido = (recebidoRows.first['total'] as num).toInt();
 
     // Saídas: saques + transferências enviadas pelo usuário
     final saidaRows = await db.rawQuery(
@@ -157,7 +157,7 @@ class TransacaoRepository {
       "AND ${DatabaseConstants.colTipo} IN ('saque', 'transferencia')",
       [usuarioId],
     );
-    final totalSaidas = (saidaRows.first['total'] as num).toDouble();
+    final totalSaidas = (saidaRows.first['total'] as num).toInt();
 
     return {
       'entradas': totalDepositos + totalRecebido,
@@ -167,11 +167,78 @@ class TransacaoRepository {
 
   Future<int> delete(int id) async {
     final db = await _database.database;
-    return db.delete(
-      DatabaseConstants.tableTransacoes,
-      where: '${DatabaseConstants.colId} = ?',
-      whereArgs: [id],
-    );
+
+    return db.transaction((txn) async {
+      // 1. Buscar a transação antes de deletar
+      final rows = await txn.query(
+        DatabaseConstants.tableTransacoes,
+        where: '${DatabaseConstants.colId} = ?',
+        whereArgs: [id],
+        limit: 1,
+      );
+      if (rows.isEmpty) return 0;
+
+      final transacao = Transacao.fromMap(rows.first);
+
+      // 2. Reverter saldo do remetente
+      final userRows = await txn.query(
+        DatabaseConstants.tableUsuarios,
+        columns: [DatabaseConstants.colSaldo],
+        where: '${DatabaseConstants.colId} = ?',
+        whereArgs: [transacao.usuarioId],
+        limit: 1,
+      );
+
+      if (userRows.isNotEmpty) {
+        final int saldoAtual =
+            (userRows.first[DatabaseConstants.colSaldo] as num).toInt();
+        int novoSaldo = saldoAtual;
+
+        if (transacao.tipo == TipoTransacao.deposito) {
+          novoSaldo -= transacao.valor;
+        } else if (transacao.tipo == TipoTransacao.saque ||
+            transacao.tipo == TipoTransacao.transferencia) {
+          novoSaldo += transacao.valor;
+        }
+
+        await txn.update(
+          DatabaseConstants.tableUsuarios,
+          {DatabaseConstants.colSaldo: novoSaldo},
+          where: '${DatabaseConstants.colId} = ?',
+          whereArgs: [transacao.usuarioId],
+        );
+      }
+
+      // 3. Reverter saldo do destinatário (transferências)
+      if (transacao.tipo == TipoTransacao.transferencia &&
+          transacao.destinatarioId != null) {
+        final destRows = await txn.query(
+          DatabaseConstants.tableUsuarios,
+          columns: [DatabaseConstants.colSaldo],
+          where: '${DatabaseConstants.colId} = ?',
+          whereArgs: [transacao.destinatarioId],
+          limit: 1,
+        );
+
+        if (destRows.isNotEmpty) {
+          final int saldoDest =
+              (destRows.first[DatabaseConstants.colSaldo] as num).toInt();
+          await txn.update(
+            DatabaseConstants.tableUsuarios,
+            {DatabaseConstants.colSaldo: saldoDest - transacao.valor},
+            where: '${DatabaseConstants.colId} = ?',
+            whereArgs: [transacao.destinatarioId],
+          );
+        }
+      }
+
+      // 4. Deletar a transação
+      return await txn.delete(
+        DatabaseConstants.tableTransacoes,
+        where: '${DatabaseConstants.colId} = ?',
+        whereArgs: [id],
+      );
+    });
   }
 }
 
@@ -204,8 +271,8 @@ class SaldoInsuficienteException implements Exception {
     required this.valorSolicitado,
   });
 
-  final double saldoAtual;
-  final double valorSolicitado;
+  final int saldoAtual;
+  final int valorSolicitado;
 
   @override
   String toString() => 'Saldo insuficiente';

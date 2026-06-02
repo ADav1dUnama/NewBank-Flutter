@@ -24,19 +24,21 @@ class UsuarioRepository {
           usuario.dataCriacao.toUtc().millisecondsSinceEpoch;
 
     try {
-      final id = await db.insert(DatabaseConstants.tableUsuarios, data);
+      return await db.transaction((txn) async {
+        final id = await txn.insert(DatabaseConstants.tableUsuarios, data);
 
-      // Generate unique account number based on the inserted ID
-      final numeroConta =
-          '${id.toString().padLeft(5, '0')}-${id % 10}';
-      await db.update(
-        DatabaseConstants.tableUsuarios,
-        {DatabaseConstants.colNumeroConta: numeroConta},
-        where: '${DatabaseConstants.colId} = ?',
-        whereArgs: [id],
-      );
+        // Generate unique account number based on the inserted ID
+        final numeroConta =
+            '${id.toString().padLeft(5, '0')}-${id % 10}';
+        await txn.update(
+          DatabaseConstants.tableUsuarios,
+          {DatabaseConstants.colNumeroConta: numeroConta},
+          where: '${DatabaseConstants.colId} = ?',
+          whereArgs: [id],
+        );
 
-      return id;
+        return id;
+      });
     } on DatabaseException catch (e) {
       if (e.isUniqueConstraintError()) {
         throw UsuarioDuplicateEmailException(usuario.email);

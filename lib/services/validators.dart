@@ -28,7 +28,7 @@ class Validators {
     if (value == null || value.isEmpty) {
       return 'Informe seu nome';
     }
-    if (value.trim().split(' ').length < 2) {
+    if (value.trim().split(RegExp(r'\s+')).length < 2) {
       return 'Informe nome e sobrenome';
     }
     return null;

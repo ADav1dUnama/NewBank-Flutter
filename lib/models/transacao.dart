@@ -15,7 +15,7 @@ class Transacao {
   final int usuarioId;
   final int? destinatarioId;
   final TipoTransacao tipo;
-  final double valor;
+  final int valor;
   final DateTime dataHora;
   final String? descricao;
 
@@ -25,7 +25,7 @@ class Transacao {
       usuarioId: map['usuario_id'] as int,
       destinatarioId: map['destinatario_id'] as int?,
       tipo: TipoTransacao.fromDb(map['tipo'] as String),
-      valor: (map['valor'] as num).toDouble(),
+      valor: (map['valor'] as num).toInt(),
       dataHora: DateTime.fromMillisecondsSinceEpoch(
         map['data_hora'] as int,
         isUtc: true,
@@ -51,7 +51,7 @@ class Transacao {
     int? usuarioId,
     int? destinatarioId,
     TipoTransacao? tipo,
-    double? valor,
+    int? valor,
     DateTime? dataHora,
     String? descricao,
   }) {
@@ -72,4 +72,21 @@ class Transacao {
         'destinatarioId: $destinatarioId, tipo: $tipo, '
         'valor: $valor, dataHora: $dataHora, descricao: $descricao)';
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is Transacao &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          usuarioId == other.usuarioId &&
+          destinatarioId == other.destinatarioId &&
+          tipo == other.tipo &&
+          valor == other.valor &&
+          dataHora == other.dataHora &&
+          descricao == other.descricao;
+
+  @override
+  int get hashCode => Object.hash(
+        id, usuarioId, destinatarioId, tipo, valor, dataHora, descricao);
 }

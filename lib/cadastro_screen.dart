@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:newbank/models/tipo_conta.dart';
 import 'package:newbank/models/usuario.dart';
 import 'package:newbank/repositories/usuario_repository.dart';
+import 'package:newbank/services/validators.dart';
 
 class CadastroScreen extends StatefulWidget {
   const CadastroScreen({super.key});
@@ -39,7 +40,7 @@ class _CadastroScreenState extends State<CadastroScreen> {
         email: _emailController.text.trim(),
         senha: '', // Vai ser hashada no repositório
         nomeCompleto: _nomeController.text.trim(),
-        saldo: 0.0, // Começa zerado
+        saldo: 0, // Começa zerado
         tipoConta: _tipoConta,
         dataCriacao: DateTime.now(),
       );
@@ -68,8 +69,8 @@ class _CadastroScreenState extends State<CadastroScreen> {
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erro ao criar conta: $e'),
+        const SnackBar(
+          content: Text('Erro inesperado ao criar conta. Tente novamente.'),
           backgroundColor: Colors.red,
         ),
       );
@@ -157,15 +158,7 @@ class _CadastroScreenState extends State<CadastroScreen> {
                               borderSide: BorderSide.none,
                             ),
                           ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Informe seu nome';
-                            }
-                            if (value.trim().split(' ').length < 2) {
-                              return 'Informe nome e sobrenome';
-                            }
-                            return null;
-                          },
+                          validator: Validators.nomeCompleto,
                         ),
                         const SizedBox(height: 16),
 
@@ -193,16 +186,7 @@ class _CadastroScreenState extends State<CadastroScreen> {
                               borderSide: BorderSide.none,
                             ),
                           ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Informe o email';
-                            }
-                            final emailRegex = RegExp(r'^[\w.-]+@[\w.-]+\.\w{2,}$');
-                            if (!emailRegex.hasMatch(value.trim())) {
-                              return 'Email inválido';
-                            }
-                            return null;
-                          },
+                          validator: Validators.email,
                         ),
                         const SizedBox(height: 16),
 
@@ -241,12 +225,7 @@ class _CadastroScreenState extends State<CadastroScreen> {
                               borderSide: BorderSide.none,
                             ),
                           ),
-                          validator: (value) {
-                            if (value == null || value.length < 6) {
-                              return 'A senha deve ter no mínimo 6 caracteres';
-                            }
-                            return null;
-                          },
+                          validator: Validators.senha,
                         ),
                         const SizedBox(height: 16),
 
@@ -259,7 +238,7 @@ class _CadastroScreenState extends State<CadastroScreen> {
                         ),
                         const SizedBox(height: 6),
                         DropdownButtonFormField<TipoConta>(
-                          value: _tipoConta,
+                          initialValue: _tipoConta,
                           decoration: InputDecoration(
                             prefixIcon: const Icon(
                               Icons.account_balance_outlined,

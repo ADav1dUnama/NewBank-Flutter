@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:newbank/models/tipo_conta.dart';
 import 'package:newbank/models/transacao.dart';
 import 'package:newbank/models/tipo_transacao.dart';
+import 'package:newbank/login_screen.dart';
 import 'package:newbank/models/usuario.dart';
 import 'package:newbank/repositories/transacao_repository.dart';
 import 'package:newbank/repositories/usuario_repository.dart';
 import 'package:newbank/services/currency_formatter.dart';
+import 'package:newbank/theme/app_theme.dart';
 import 'package:newbank/transferencia_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -23,8 +25,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   late Usuario _usuario;
   List<Transacao> _transacoes = [];
-  double _totalEntradas = 0;
-  double _totalSaidas = 0;
+  int _totalEntradas = 0;
+  int _totalSaidas = 0;
 
   final _usuarioRepo = UsuarioRepository();
   final _transacaoRepo = TransacaoRepository();
@@ -109,6 +111,32 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _logout() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Sair da conta'),
+        content: const Text('Deseja realmente sair?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
+                (route) => false,
+              );
+            },
+            child: const Text('Sair', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildHeader() {
     final tipoConta = _usuario.tipoConta == TipoConta.corrente
         ? 'Conta corrente'
@@ -118,7 +146,9 @@ class _HomeScreenState extends State<HomeScreen> {
         : _usuario.agencia;
 
     return Container(
-      color: verde,
+      decoration: const BoxDecoration(
+        gradient: AppTheme.headerGradient,
+      ),
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -126,7 +156,10 @@ class _HomeScreenState extends State<HomeScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Icon(Icons.menu, color: Colors.white, size: 28),
+              GestureDetector(
+                onTap: _logout,
+                child: const Icon(Icons.logout_rounded, color: Colors.white, size: 26),
+              ),
               Stack(
                 children: [
                   const Icon(
@@ -308,7 +341,7 @@ class _HomeScreenState extends State<HomeScreen> {
               borderRadius: BorderRadius.circular(14),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.07),
+                  color: Colors.black.withValues(alpha: 0.07),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -338,7 +371,7 @@ class _HomeScreenState extends State<HomeScreen> {
         decoration: BoxDecoration(
           color: verdeBackground,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: verde.withOpacity(0.15)),
+          border: Border.all(color: verde.withValues(alpha: 0.15)),
         ),
         child: Row(
           children: [
@@ -346,7 +379,7 @@ class _HomeScreenState extends State<HomeScreen> {
               width: 42,
               height: 42,
               decoration: BoxDecoration(
-                color: verde.withOpacity(0.1),
+                color: verde.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
@@ -383,7 +416,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Resumo de entradas e saídas — dados reais do banco
   Widget _buildResumo() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -395,7 +427,7 @@ class _HomeScreenState extends State<HomeScreen> {
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.white.withValues(alpha: 0.2),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -441,29 +473,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  IconData _iconeParaTipo(TipoTransacao tipo) {
-    switch (tipo) {
-      case TipoTransacao.transferencia:
-        return Icons.swap_horiz_rounded;
-      case TipoTransacao.deposito:
-        return Icons.arrow_downward_rounded;
-      case TipoTransacao.saque:
-        return Icons.arrow_upward_rounded;
-    }
-  }
-
-  String _labelParaTipo(TipoTransacao tipo) {
-    switch (tipo) {
-      case TipoTransacao.transferencia:
-        return 'Transferência';
-      case TipoTransacao.deposito:
-        return 'Depósito';
-      case TipoTransacao.saque:
-        return 'Saque';
-    }
-  }
-
-  /// Determina se a transação é positiva (entrada) para o usuário atual.
   bool _isEntrada(Transacao t) {
     if (t.tipo == TipoTransacao.deposito) return true;
     if (t.tipo == TipoTransacao.transferencia &&
@@ -497,7 +506,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 borderRadius: BorderRadius.circular(14),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withValues(alpha: 0.05),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -521,7 +530,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 borderRadius: BorderRadius.circular(14),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withValues(alpha: 0.05),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -532,8 +541,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   final i = entry.key;
                   final t = entry.value;
                   final positivo = _isEntrada(t);
-                  final icone = _iconeParaTipo(t.tipo);
-                  final titulo = _labelParaTipo(t.tipo);
+                  final icone = t.tipo.icone;
+                  final titulo = t.tipo.label;
                   final dataStr =
                       '${t.dataHora.toLocal().day.toString().padLeft(2, '0')}/'
                       '${t.dataHora.toLocal().month.toString().padLeft(2, '0')}/'
@@ -555,9 +564,9 @@ class _HomeScreenState extends State<HomeScreen> {
                               width: 42,
                               height: 42,
                               decoration: BoxDecoration(
-                                color: positivo
-                                    ? verde.withOpacity(0.1)
-                                    : Colors.red.withOpacity(0.08),
+                                color: t.tipo == TipoTransacao.deposito
+                                    ? verde.withValues(alpha: 0.1)
+                                    : Colors.grey.withValues(alpha: 0.1),
                                 shape: BoxShape.circle,
                               ),
                               child: Icon(
@@ -636,7 +645,7 @@ class _HomeScreenState extends State<HomeScreen> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 10,
             offset: const Offset(0, -2),
           ),

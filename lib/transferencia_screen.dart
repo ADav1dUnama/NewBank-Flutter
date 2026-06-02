@@ -5,6 +5,7 @@ import 'package:newbank/models/usuario.dart';
 import 'package:newbank/repositories/transacao_repository.dart';
 import 'package:newbank/repositories/usuario_repository.dart';
 import 'package:newbank/services/currency_formatter.dart';
+import 'package:newbank/services/validators.dart';
 
 class TransferenciaScreen extends StatefulWidget {
   const TransferenciaScreen({super.key, required this.usuario});
@@ -35,12 +36,15 @@ class _TransferenciaScreenState extends State<TransferenciaScreen> {
   Future<void> _fazerTransferencia() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final valor =
-        double.tryParse(_valorController.text.replaceAll(',', '.')) ?? 0;
-    if (valor <= 0) {
+    final valorStr = _valorController.text.replaceAll('.', '').replaceAll(',', '.');
+    final valorDouble = double.tryParse(valorStr);
+    if (valorDouble == null || valorDouble <= 0) {
       _mostrarErro('Valor inválido');
       return;
     }
+
+
+    final valor = (valorDouble * 100).round(); // centavos
 
     final emailDest = _emailDestinatarioController.text.trim();
 
@@ -56,6 +60,36 @@ class _TransferenciaScreenState extends State<TransferenciaScreen> {
 
       if (destinatario.id == widget.usuario.id) {
         _mostrarErro('Não é possível transferir para si mesmo.');
+        return;
+      }
+
+      if (!mounted) return;
+      final confirmado = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Confirmar transferência'),
+          content: Text(
+            'Transferir ${CurrencyFormatter.format(valor)} para '
+            '${destinatario.nomeCompleto}?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1B8C3E)),
+              child: const Text('Confirmar', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      );
+
+      if (!mounted) return;
+
+      if (confirmado != true) {
+        setState(() => _carregando = false);
         return;
       }
 
@@ -138,15 +172,7 @@ class _TransferenciaScreenState extends State<TransferenciaScreen> {
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.person_search_outlined),
                   ),
-                  validator: (val) {
-                    if (val == null || val.trim().isEmpty) {
-                      return 'Informe o email do destinatário';
-                    }
-                    if (!val.contains('@') || !val.contains('.')) {
-                      return 'Email inválido';
-                    }
-                    return null;
-                  },
+                  validator: Validators.email,
                 ),
                 const SizedBox(height: 16),
 

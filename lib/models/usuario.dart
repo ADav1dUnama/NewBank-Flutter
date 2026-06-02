@@ -17,7 +17,7 @@ class Usuario {
   final String email;
   final String senha;
   final String nomeCompleto;
-  final double saldo;
+  final int saldo;
   final TipoConta tipoConta;
   final DateTime dataCriacao;
   final String agencia;
@@ -29,7 +29,7 @@ class Usuario {
       email: map['email'] as String,
       senha: map['senha'] as String,
       nomeCompleto: map['nome_completo'] as String,
-      saldo: (map['saldo'] as num).toDouble(),
+      saldo: (map['saldo'] as num).toInt(),
       tipoConta: TipoConta.fromDb(map['tipo_conta'] as String),
       dataCriacao: DateTime.fromMillisecondsSinceEpoch(
         map['data_criacao'] as int,
@@ -59,7 +59,7 @@ class Usuario {
     String? email,
     String? senha,
     String? nomeCompleto,
-    double? saldo,
+    int? saldo,
     TipoConta? tipoConta,
     DateTime? dataCriacao,
     String? agencia,
@@ -84,4 +84,21 @@ class Usuario {
         'saldo: $saldo, tipoConta: $tipoConta, dataCriacao: $dataCriacao, '
         'agencia: $agencia, numeroConta: $numeroConta)';
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is Usuario &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          email == other.email &&
+          nomeCompleto == other.nomeCompleto &&
+          saldo == other.saldo &&
+          tipoConta == other.tipoConta &&
+          agencia == other.agencia &&
+          numeroConta == other.numeroConta;
+
+  @override
+  int get hashCode => Object.hash(
+        id, email, nomeCompleto, saldo, tipoConta, agencia, numeroConta);
 }

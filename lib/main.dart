@@ -3,23 +3,34 @@ import 'package:newbank/database/app_database.dart';
 import 'package:newbank/models/tipo_conta.dart';
 import 'package:newbank/models/usuario.dart';
 import 'package:newbank/repositories/usuario_repository.dart';
+import 'package:newbank/theme/app_theme.dart';
 import 'login_screen.dart';
 
+/// Seeds the database with a demo admin user for development.
+/// In production, this should be removed or replaced by a proper
+/// onboarding flow.
 Future<void> _seedDatabase() async {
-  final repo = UsuarioRepository();
-  final admin = await repo.findByEmail('admin@banco.com.br');
-  if (admin == null) {
-    await repo.insert(
-      Usuario(
-        email: 'admin@banco.com.br',
-        senha: '',
-        nomeCompleto: 'Administrador Sistema',
-        saldo: 1500.0,
-        tipoConta: TipoConta.corrente,
-        dataCriacao: DateTime.now(),
-      ),
-      plainPassword: 'admin123',
-    );
+  try {
+    final repo = UsuarioRepository();
+    final admin = await repo.findByEmail('admin@banco.com.br');
+    if (admin == null) {
+      await repo.insert(
+        Usuario(
+          email: 'admin@banco.com.br',
+          senha: '',
+          nomeCompleto: 'Administrador Sistema',
+          saldo: 150000, // R$ 1.500,00 em centavos
+          tipoConta: TipoConta.corrente,
+          dataCriacao: DateTime.now(),
+        ),
+        plainPassword: const String.fromEnvironment(
+          'ADMIN_PASSWORD',
+          defaultValue: 'Admin@2026!',
+        ),
+      );
+    }
+  } catch (e) {
+    debugPrint('Erro ao popular banco de dados: $e');
   }
 }
 
@@ -38,10 +49,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'NewBank',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
-        useMaterial3: true,
-      ),
+      theme: AppTheme.lightTheme,
       home: const LoginScreen(),
     );
   }

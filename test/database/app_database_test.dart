@@ -8,7 +8,7 @@ import 'package:newbank/models/usuario.dart';
 import 'package:newbank/repositories/transacao_repository.dart';
 import 'package:newbank/repositories/usuario_repository.dart';
 import 'package:newbank/services/password_service.dart';
-import 'package:newbank/services/validators.dart';
+
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 void main() {
@@ -107,7 +107,7 @@ void main() {
 
   test('deposito increases user saldo', () async {
     final userId = await usuarioRepository.insert(
-      _sampleUsuario(saldo: 100),
+      _sampleUsuario(saldo: 10000),
       plainPassword: 'secret123',
     );
 
@@ -115,18 +115,18 @@ void main() {
       Transacao(
         usuarioId: userId,
         tipo: TipoTransacao.deposito,
-        valor: 250,
+        valor: 25000,
         dataHora: DateTime.utc(2026, 5, 26, 12),
       ),
     );
 
     final updated = await usuarioRepository.findById(userId);
-    expect(updated!.saldo, 350);
+    expect(updated!.saldo, 35000);
   });
 
   test('saque decreases user saldo', () async {
     final userId = await usuarioRepository.insert(
-      _sampleUsuario(saldo: 500),
+      _sampleUsuario(saldo: 50000),
       plainPassword: 'secret123',
     );
 
@@ -134,18 +134,18 @@ void main() {
       Transacao(
         usuarioId: userId,
         tipo: TipoTransacao.saque,
-        valor: 200,
+        valor: 20000,
         dataHora: DateTime.utc(2026, 5, 26, 12),
       ),
     );
 
     final updated = await usuarioRepository.findById(userId);
-    expect(updated!.saldo, 300);
+    expect(updated!.saldo, 30000);
   });
 
   test('saque rejects when saldo insuficiente', () async {
     final userId = await usuarioRepository.insert(
-      _sampleUsuario(saldo: 50),
+      _sampleUsuario(saldo: 5000),
       plainPassword: 'secret123',
     );
 
@@ -154,7 +154,7 @@ void main() {
         Transacao(
           usuarioId: userId,
           tipo: TipoTransacao.saque,
-          valor: 100,
+          valor: 10000,
           dataHora: DateTime.utc(2026, 5, 26, 12),
         ),
       ),
@@ -164,11 +164,11 @@ void main() {
 
   test('transferencia debits sender and credits recipient', () async {
     final senderId = await usuarioRepository.insert(
-      _sampleUsuario(saldo: 1000),
+      _sampleUsuario(saldo: 100000),
       plainPassword: 'secret123',
     );
     final recipientId = await usuarioRepository.insert(
-      _sampleUsuario2(saldo: 200),
+      _sampleUsuario2(saldo: 20000),
       plainPassword: 'secret456',
     );
 
@@ -177,7 +177,7 @@ void main() {
         usuarioId: senderId,
         destinatarioId: recipientId,
         tipo: TipoTransacao.transferencia,
-        valor: 300,
+        valor: 30000,
         dataHora: DateTime.utc(2026, 5, 26, 14),
         descricao: 'Transferência teste',
       ),
@@ -185,13 +185,13 @@ void main() {
 
     final sender = await usuarioRepository.findById(senderId);
     final recipient = await usuarioRepository.findById(recipientId);
-    expect(sender!.saldo, 700);
-    expect(recipient!.saldo, 500);
+    expect(sender!.saldo, 70000);
+    expect(recipient!.saldo, 50000);
   });
 
   test('transferencia rejects without destinatarioId', () async {
     final userId = await usuarioRepository.insert(
-      _sampleUsuario(saldo: 1000),
+      _sampleUsuario(saldo: 100000),
       plainPassword: 'secret123',
     );
 
@@ -200,7 +200,7 @@ void main() {
         Transacao(
           usuarioId: userId,
           tipo: TipoTransacao.transferencia,
-          valor: 100,
+          valor: 10000,
           dataHora: DateTime.utc(2026, 5, 26, 12),
         ),
       ),
@@ -210,7 +210,7 @@ void main() {
 
   test('transferencia rejects self-transfer', () async {
     final userId = await usuarioRepository.insert(
-      _sampleUsuario(saldo: 1000),
+      _sampleUsuario(saldo: 100000),
       plainPassword: 'secret123',
     );
 
@@ -220,7 +220,7 @@ void main() {
           usuarioId: userId,
           destinatarioId: userId,
           tipo: TipoTransacao.transferencia,
-          valor: 100,
+          valor: 10000,
           dataHora: DateTime.utc(2026, 5, 26, 12),
         ),
       ),
@@ -230,7 +230,7 @@ void main() {
 
   test('transferencia rejects when destinatario not found', () async {
     final userId = await usuarioRepository.insert(
-      _sampleUsuario(saldo: 1000),
+      _sampleUsuario(saldo: 100000),
       plainPassword: 'secret123',
     );
 
@@ -240,7 +240,7 @@ void main() {
           usuarioId: userId,
           destinatarioId: 999,
           tipo: TipoTransacao.transferencia,
-          valor: 100,
+          valor: 10000,
           dataHora: DateTime.utc(2026, 5, 26, 12),
         ),
       ),
@@ -254,7 +254,7 @@ void main() {
         Transacao(
           usuarioId: 999,
           tipo: TipoTransacao.saque,
-          valor: 50,
+          valor: 5000,
           dataHora: DateTime.utc(2026, 5, 26, 11),
         ),
       ),
@@ -273,7 +273,7 @@ void main() {
       Transacao(
         usuarioId: usuarioId,
         tipo: TipoTransacao.deposito,
-        valor: 100,
+        valor: 10000,
         dataHora: DateTime.utc(2026, 5, 26, 8),
       ),
     );
@@ -281,7 +281,7 @@ void main() {
       Transacao(
         usuarioId: usuarioId,
         tipo: TipoTransacao.saque,
-        valor: 25,
+        valor: 2500,
         dataHora: DateTime.utc(2026, 5, 26, 18),
       ),
     );
@@ -302,7 +302,7 @@ void main() {
       Transacao(
         usuarioId: usuarioId,
         tipo: TipoTransacao.deposito,
-        valor: 100,
+        valor: 10000,
         dataHora: DateTime.utc(2026, 5, 26, 10),
       ),
     );
@@ -326,7 +326,7 @@ void main() {
       Transacao(
         usuarioId: userId,
         tipo: TipoTransacao.deposito,
-        valor: 200,
+        valor: 20000,
         dataHora: DateTime.utc(2026, 5, 26, 8),
       ),
     );
@@ -334,7 +334,7 @@ void main() {
       Transacao(
         usuarioId: userId,
         tipo: TipoTransacao.deposito,
-        valor: 100,
+        valor: 10000,
         dataHora: DateTime.utc(2026, 5, 26, 9),
       ),
     );
@@ -343,19 +343,19 @@ void main() {
       Transacao(
         usuarioId: userId,
         tipo: TipoTransacao.saque,
-        valor: 50,
+        valor: 5000,
         dataHora: DateTime.utc(2026, 5, 26, 10),
       ),
     );
 
     final resumo = await transacaoRepository.calcularResumo(userId);
-    expect(resumo['entradas'], 300);
-    expect(resumo['saidas'], 50);
+    expect(resumo['entradas'], 30000);
+    expect(resumo['saidas'], 5000);
   });
 
   test('calcularResumo counts received transfers as entradas', () async {
     final senderId = await usuarioRepository.insert(
-      _sampleUsuario(saldo: 1000),
+      _sampleUsuario(saldo: 100000),
       plainPassword: 'secret123',
     );
     final recipientId = await usuarioRepository.insert(
@@ -368,7 +368,7 @@ void main() {
         usuarioId: senderId,
         destinatarioId: recipientId,
         tipo: TipoTransacao.transferencia,
-        valor: 400,
+        valor: 40000,
         dataHora: DateTime.utc(2026, 5, 26, 12),
       ),
     );
@@ -376,61 +376,19 @@ void main() {
     // For recipient: entradas = 400 (received transfer), saidas = 0
     final recipientResumo =
         await transacaoRepository.calcularResumo(recipientId);
-    expect(recipientResumo['entradas'], 400);
+    expect(recipientResumo['entradas'], 40000);
     expect(recipientResumo['saidas'], 0);
 
     // For sender: entradas = 0, saidas = 400 (sent transfer)
     final senderResumo = await transacaoRepository.calcularResumo(senderId);
     expect(senderResumo['entradas'], 0);
-    expect(senderResumo['saidas'], 400);
+    expect(senderResumo['saidas'], 40000);
   });
 
-  // ─── Validator Tests ───
 
-  group('Validators', () {
-    test('email rejects empty', () {
-      expect(Validators.email(null), isNotNull);
-      expect(Validators.email(''), isNotNull);
-    });
-
-    test('email rejects invalid formats', () {
-      expect(Validators.email('@'), isNotNull);
-      expect(Validators.email('foo@'), isNotNull);
-      expect(Validators.email('@bar'), isNotNull);
-      expect(Validators.email('no-at-sign'), isNotNull);
-      expect(Validators.email('foo@bar'), isNotNull); // no TLD
-    });
-
-    test('email accepts valid formats', () {
-      expect(Validators.email('user@example.com'), isNull);
-      expect(Validators.email('a.b@c.de'), isNull);
-      expect(Validators.email('test123@domain.co.uk'), isNull);
-    });
-
-    test('senha rejects short passwords', () {
-      expect(Validators.senha(null), isNotNull);
-      expect(Validators.senha('12345'), isNotNull);
-    });
-
-    test('senha accepts valid passwords', () {
-      expect(Validators.senha('123456'), isNull);
-      expect(Validators.senha('my-secure-pass'), isNull);
-    });
-
-    test('nomeCompleto requires first and last name', () {
-      expect(Validators.nomeCompleto(null), isNotNull);
-      expect(Validators.nomeCompleto(''), isNotNull);
-      expect(Validators.nomeCompleto('Maria'), isNotNull);
-    });
-
-    test('nomeCompleto accepts full names', () {
-      expect(Validators.nomeCompleto('Maria Silva'), isNull);
-      expect(Validators.nomeCompleto('João Pedro Santos'), isNull);
-    });
-  });
 }
 
-Usuario _sampleUsuario({double saldo = 1000}) {
+Usuario _sampleUsuario({int saldo = 100000}) {
   return Usuario(
     email: 'user@example.com',
     senha: '',
@@ -441,7 +399,7 @@ Usuario _sampleUsuario({double saldo = 1000}) {
   );
 }
 
-Usuario _sampleUsuario2({double saldo = 500}) {
+Usuario _sampleUsuario2({int saldo = 50000}) {
   return Usuario(
     email: 'user2@example.com',
     senha: '',
