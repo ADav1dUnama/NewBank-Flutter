@@ -1,35 +1,46 @@
 import 'package:flutter/material.dart';
-import 'package:newbank/models/tipo_transacao.dart';
-import 'package:newbank/models/transacao.dart';
+import 'package:newbank/controllers/transferencia_controller.dart';
 import 'package:newbank/models/usuario.dart';
 import 'package:newbank/repositories/transacao_repository.dart';
-import 'package:newbank/repositories/usuario_repository.dart';
 import 'package:newbank/services/currency_formatter.dart';
 import 'package:newbank/services/validators.dart';
 
 class TransferenciaScreen extends StatefulWidget {
-  const TransferenciaScreen({super.key, required this.usuario});
-
   final Usuario usuario;
+
+  const TransferenciaScreen({super.key, required this.usuario});
 
   @override
   State<TransferenciaScreen> createState() => _TransferenciaScreenState();
 }
 
 class _TransferenciaScreenState extends State<TransferenciaScreen> {
+  late final TransferenciaController _controller;
   final _formKey = GlobalKey<FormState>();
-  final _valorController = TextEditingController();
-  final _descricaoController = TextEditingController();
-  final _emailDestinatarioController = TextEditingController();
-  final _transacaoRepo = TransacaoRepository();
-  final _usuarioRepo = UsuarioRepository();
-  bool _carregando = false;
+  
+  final _pixKeyController = TextEditingController();
+  final _valueController = TextEditingController();
+  final _descriptionController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TransferenciaController(
+      transacaoRepo: TransacaoRepository(),
+      usuario: widget.usuario,
+    );
+    _valueController.text = '0,00';
+    
+    _controller.addListener(_onControllerUpdate);
+  }
 
   @override
   void dispose() {
-    _valorController.dispose();
-    _descricaoController.dispose();
-    _emailDestinatarioController.dispose();
+    _controller.removeListener(_onControllerUpdate);
+    _controller.dispose();
+    _pixKeyController.dispose();
+    _valueController.dispose();
+    _descriptionController.dispose();
     super.dispose();
   }
 
@@ -111,66 +122,56 @@ class _TransferenciaScreenState extends State<TransferenciaScreen> {
             'Transferência de ${CurrencyFormatter.format(valor)} '
             'para ${destinatario.nomeCompleto} realizada!',
           ),
-          backgroundColor: Colors.green,
         ),
       );
-
-      // Voltar para Home e indicar que houve atualização
-      Navigator.pop(context, true);
-    } on SaldoInsuficienteException {
-      _mostrarErro('Saldo insuficiente para esta transferência.');
-    } catch (e) {
-      _mostrarErro(e.toString().replaceAll('Exception: ', ''));
-    } finally {
-      if (mounted) setState(() => _carregando = false);
     }
   }
 
-  void _mostrarErro(String mensagem) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(mensagem), backgroundColor: Colors.red),
+  Future<void> _fazerTransferencia() async {
+    if (!_formKey.currentState!.validate()) return;
+    
+    await _controller.realizarTransferencia(
+      chavePix: _pixKeyController.text,
+      valorStr: _valueController.text,
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    const verde = Color(0xFF1B8C3E);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Transferência',
-          style: TextStyle(color: Colors.white),
-        ),
-        backgroundColor: verde,
-        iconTheme: const IconThemeData(color: Colors.white),
+        automaticallyImplyLeading: false,
+        title: const Text('Transferência'),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Saldo atual: ${CurrencyFormatter.format(widget.usuario.saldo)}',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+      body: ListenableBuilder(
+        listenable: _controller,
+        builder: (context, child) {
+          return SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Saldo atual',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                   ),
-                ),
-                const SizedBox(height: 24),
-
-                // ── Email do destinatário ──
-                TextFormField(
-                  controller: _emailDestinatarioController,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(
-                    labelText: 'Email do destinatário',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.person_search_outlined),
+                  const SizedBox(height: 8),
+                  _buildBalanceCard(isDark),
+                  const SizedBox(height: 20),
+                  CustomTextField(
+                    controller: _pixKeyController,
+                    label: 'Chave Pix',
+                    hintText: 'CPF, CNPJ, e-mail ou telefone',
+                    suffixIcon: const Icon(Icons.qr_code_scanner, color: AppColors.primary, size: 22),
+                    validator: (val) {
+                      if (val == null || val.trim().isEmpty) return 'Informe a chave Pix';
+                      if (!_controller.isValidaChavePix(val)) return 'Formato inválido';
+                      return null;
+                    },
                   ),
                   validator: Validators.email,
                 ),
@@ -182,48 +183,79 @@ class _TransferenciaScreenState extends State<TransferenciaScreen> {
                   keyboardType: const TextInputType.numberWithOptions(
                     decimal: true,
                   ),
-                  decoration: const InputDecoration(
-                    labelText: 'Valor a transferir (R\$)',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.attach_money),
+                  const SizedBox(height: 20),
+                  CustomTextField(
+                    controller: _descriptionController,
+                    label: 'Descrição (opcional)',
+                    hintText: 'Ex: Aluguel, pagamento...',
+                    maxLength: 50,
                   ),
-                  validator: (val) {
-                    if (val == null || val.isEmpty) return 'Informe o valor';
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
+                  const SizedBox(height: 32),
+                  PrimaryButton(
+                    label: 'Transferir',
+                    isLoading: _controller.loading,
+                    onPressed: _fazerTransferencia,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildSecurityBadge(isDark),
+                  const SizedBox(height: 24),
+                  const Center(
+                    child: Text(
+                      'Recurso simulado',
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+      bottomNavigationBar: CustomBottomNavBar(
+        currentIndex: 2,
+        onTap: (i) {
+          if (i == 2) return;
+          Navigator.pop(context);
+        },
+      ),
+    );
+  }
 
-                // ── Descrição ──
-                TextFormField(
-                  controller: _descricaoController,
-                  decoration: const InputDecoration(
-                    labelText: 'Descrição (Opcional)',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.notes_outlined),
-                  ),
-                ),
-                const SizedBox(height: 32),
+  Widget _buildBalanceCard(bool isDark) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        border: Border.all(color: isDark ? Colors.white12 : AppColors.border),
+        borderRadius: BorderRadius.circular(10),
+        color: isDark ? Colors.black : AppColors.card,
+      ),
+      child: Text(
+        CurrencyFormatter.format(widget.usuario.saldo),
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+      ),
+    );
+  }
 
-                // ── Botão ──
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: _carregando ? null : _fazerTransferencia,
-                    style: ElevatedButton.styleFrom(backgroundColor: verde),
-                    child: _carregando
-                        ? const CircularProgressIndicator(color: Colors.white)
-                        : const Text(
-                            'Transferir',
-                            style: TextStyle(color: Colors.white, fontSize: 16),
-                          ),
-                  ),
-                ),
-              ],
+  Widget _buildSecurityBadge(bool isDark) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.transparent : AppColors.primaryExtraLight,
+        borderRadius: BorderRadius.circular(12),
+        border: isDark ? Border.all(color: Colors.white12) : null,
+      ),
+      child: const Row(
+        children: [
+          Icon(Icons.shield_outlined, color: AppColors.primary, size: 22),
+          SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Suas transações são protegidas\ncom segurança de ponta a ponta.',
+              style: TextStyle(fontSize: 12, height: 1.5),
             ),
           ),
-        ),
+        ],
       ),
     );
   }

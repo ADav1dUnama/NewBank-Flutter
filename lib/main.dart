@@ -38,11 +38,16 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await AppDatabase.instance.database;
   await _seedDatabase();
-  runApp(const MyApp());
+
+  final secureStorage = SecureStorageService();
+  final lastLoggedUserId = await secureStorage.getLastLoggedUserId();
+
+  runApp(MyApp(initialUserId: lastLoggedUserId));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final int? initialUserId;
+  const MyApp({super.key, this.initialUserId});
 
   @override
   Widget build(BuildContext context) {

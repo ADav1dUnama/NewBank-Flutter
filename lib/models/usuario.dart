@@ -11,6 +11,7 @@ class Usuario {
     required this.dataCriacao,
     this.agencia = '0001',
     this.numeroConta = '',
+    this.extrato = const [],
   });
 
   final int? id;
@@ -22,6 +23,7 @@ class Usuario {
   final DateTime dataCriacao;
   final String agencia;
   final String numeroConta;
+  final List<Map<String, dynamic>> extrato;
 
   factory Usuario.fromMap(Map<String, Object?> map) {
     return Usuario(
