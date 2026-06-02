@@ -4,11 +4,14 @@ import 'package:newbank/models/tipo_conta.dart';
 import 'package:newbank/models/tipo_transacao.dart';
 import 'package:newbank/login_screen.dart';
 import 'package:newbank/models/usuario.dart';
+import 'package:newbank/models/transacao.dart';
 import 'package:newbank/repositories/transacao_repository.dart';
 import 'package:newbank/repositories/usuario_repository.dart';
 import 'package:newbank/services/currency_formatter.dart';
 import 'package:newbank/theme/app_theme.dart';
 import 'package:newbank/transferencia_screen.dart';
+import 'package:newbank/landing_page.dart';
+import 'package:newbank/services/secure_storage_service.dart';
 import 'package:newbank/cotacao_screen.dart';
 import 'package:newbank/extrato_screen.dart';
 import 'package:newbank/meus_dados_screen.dart';
@@ -73,6 +76,22 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _mostrarEmBreve(String feature) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('$feature em breve!')),
+    );
+  }
+
+  Future<void> _navegarTransferencia() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => TransferenciaScreen(usuario: _controller.usuario),
+      ),
+    );
+    await _controller.carregarDados();
+  }
+
   void _exibirPromptDeposito() {
     final valController = TextEditingController();
     showDialog(
@@ -101,7 +120,8 @@ class _HomeScreenState extends State<HomeScreen> {
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Agora não')),
           ElevatedButton(
             onPressed: () async {
-              final valor = double.tryParse(valController.text) ?? 0;
+              final valorDouble = double.tryParse(valController.text) ?? 0.0;
+              final valor = (valorDouble * 100).round();
               await _controller.realizarDeposito(valor);
               if (context.mounted) Navigator.pop(context);
             },
@@ -260,14 +280,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildHeader() {
-    final tipoConta = _usuario.tipoConta == TipoConta.corrente
-        ? 'Conta corrente'
-        : 'Conta poupança';
-    final numeroConta = _usuario.numeroConta.isNotEmpty
-        ? '${_usuario.agencia} • ${_usuario.numeroConta}'
-        : _usuario.agencia;
-
+  Widget _buildHeader(bool isDark) {
     return Container(
       decoration: const BoxDecoration(
         gradient: AppTheme.headerGradient,
@@ -354,7 +367,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(tipoConta, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.grey)),
+                        Text(_controller.usuario.tipoConta == TipoConta.corrente ? 'Conta corrente' : 'Conta poupança', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.grey)),
                         Text('${_controller.usuario.agencia} • ${_controller.usuario.numeroConta}', style: const TextStyle(fontSize: 13)),
                       ],
                     ),
@@ -396,9 +409,9 @@ class _HomeScreenState extends State<HomeScreen> {
               borderRadius: BorderRadius.circular(14),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.07),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
+                  color: Colors.black.withValues(alpha: 0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
                 ),
               ],
             ),
@@ -421,7 +434,7 @@ class _HomeScreenState extends State<HomeScreen> {
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: verde.withValues(alpha: 0.15)),
         ),
-        child: const Row(
+        child: Row(
           children: [
             Container(
               width: 42,
@@ -464,7 +477,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildResumo() {
+  Widget _buildResumo(bool isDark) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Container(
@@ -510,7 +523,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return false;
   }
 
-  Widget _buildMovimentacoes() {
+  Widget _buildMovimentacoes(bool isDark) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
@@ -640,21 +653,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 }).toList(),
               ),
             ),
-            child: Column(
-              children: _controller.transacoes.take(5).map((t) => ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: t.tipo == TipoTransacao.deposito ? AppColors.primaryLight : Colors.red[50],
-                  child: Icon(t.tipo == TipoTransacao.deposito ? Icons.arrow_downward : Icons.arrow_upward, color: t.tipo == TipoTransacao.deposito ? AppColors.primary : Colors.red, size: 20),
-                ),
-                title: Text(t.tipo == TipoTransacao.deposito ? 'Depósito' : 'Transferência', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                subtitle: Text(t.descricao ?? '', style: const TextStyle(fontSize: 12)),
-                trailing: Text(
-                  '${t.tipo == TipoTransacao.deposito ? '+' : '-'} ${CurrencyFormatter.format(t.valor)}',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: t.tipo == TipoTransacao.deposito ? AppColors.primary : Colors.black),
-                ),
-              )).toList(),
-            ),
-          ),
         ],
       ),
     );
@@ -703,7 +701,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   if (action == 'transfer') {
                     await _navegarTransferencia();
                   } else if (action == 'soon') {
-                    _mostrarEmBreve();
+                    _mostrarEmBreve(item['label'] as String? ?? 'Recurso');
                   }
                 },
                 child: Column(

@@ -4,6 +4,7 @@ import 'package:newbank/models/tipo_conta.dart';
 import 'package:newbank/models/usuario.dart';
 import 'package:newbank/repositories/usuario_repository.dart';
 import 'package:newbank/theme/app_theme.dart';
+import 'package:newbank/services/secure_storage_service.dart';
 import 'login_screen.dart';
 
 /// Seeds the database with a demo admin user for development.

@@ -22,11 +22,11 @@ class HomeController extends ChangeNotifier {
   List<Transacao> _transacoes = [];
   List<Transacao> get transacoes => _transacoes;
 
-  double _totalEntradas = 0;
-  double get totalEntradas => _totalEntradas;
+  int _totalEntradas = 0;
+  int get totalEntradas => _totalEntradas;
 
-  double _totalSaidas = 0;
-  double get totalSaidas => _totalSaidas;
+  int _totalSaidas = 0;
+  int get totalSaidas => _totalSaidas;
 
   bool _promptDepositoMostrado = false;
   bool get promptDepositoMostrado => _promptDepositoMostrado;
@@ -48,15 +48,15 @@ class HomeController extends ChangeNotifier {
       _transacoes = await transacaoRepo.findByUsuarioId(usuario.id!);
       final resumo = await transacaoRepo.calcularResumo(usuario.id!);
 
-      _totalEntradas = resumo['entradas'] ?? 0;
-      _totalSaidas = resumo['saidas'] ?? 0;
+      _totalEntradas = resumo['entradas']?.toInt() ?? 0;
+      _totalSaidas = resumo['saidas']?.toInt() ?? 0;
     } finally {
       _loading = false;
       notifyListeners();
     }
   }
 
-  Future<void> realizarDeposito(double valor) async {
+  Future<void> realizarDeposito(int valor) async {
     if (valor <= 0) return;
 
     final transacao = Transacao(

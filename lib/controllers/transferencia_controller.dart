@@ -56,9 +56,11 @@ class TransferenciaController extends ChangeNotifier {
       return;
     }
 
-    final valor = double.tryParse(
-          valorStr.replaceAll('R\$ ', '').replaceAll('.', '').replaceAll(',', '.'),
-        ) ?? 0;
+    final valorDouble = double.tryParse(
+          valorStr.replaceAll(RegExp(r'[R\$\s]'), '').replaceAll('.', '').replaceAll(',', '.'),
+        ) ?? 0.0;
+        
+    final valor = (valorDouble * 100).round();
 
     if (valor <= 0) {
       _errorMessage = 'Valor inválido';

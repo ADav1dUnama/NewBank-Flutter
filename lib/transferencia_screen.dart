@@ -4,6 +4,10 @@ import 'package:newbank/models/usuario.dart';
 import 'package:newbank/repositories/transacao_repository.dart';
 import 'package:newbank/services/currency_formatter.dart';
 import 'package:newbank/services/validators.dart';
+import 'package:newbank/theme/app_colors.dart';
+import 'package:newbank/widgets/custom_text_field.dart';
+import 'package:newbank/widgets/primary_button.dart';
+import 'package:newbank/widgets/custom_bottom_nav_bar.dart';
 
 class TransferenciaScreen extends StatefulWidget {
   final Usuario usuario;
@@ -30,8 +34,19 @@ class _TransferenciaScreenState extends State<TransferenciaScreen> {
       usuario: widget.usuario,
     );
     _valueController.text = '0,00';
-    
     _controller.addListener(_onControllerUpdate);
+  }
+
+  void _onControllerUpdate() {
+    if (_controller.errorMessage != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_controller.errorMessage!)),
+      );
+    } else if (_controller.success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Transferência realizada!')),
+      );
+    }
   }
 
   @override
@@ -42,89 +57,6 @@ class _TransferenciaScreenState extends State<TransferenciaScreen> {
     _valueController.dispose();
     _descriptionController.dispose();
     super.dispose();
-  }
-
-  Future<void> _fazerTransferencia() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    final valorStr = _valorController.text.replaceAll('.', '').replaceAll(',', '.');
-    final valorDouble = double.tryParse(valorStr);
-    if (valorDouble == null || valorDouble <= 0) {
-      _mostrarErro('Valor inválido');
-      return;
-    }
-
-
-    final valor = (valorDouble * 100).round(); // centavos
-
-    final emailDest = _emailDestinatarioController.text.trim();
-
-    setState(() => _carregando = true);
-
-    try {
-      // Buscar destinatário por email
-      final destinatario = await _usuarioRepo.findByEmail(emailDest);
-      if (destinatario == null) {
-        _mostrarErro('Destinatário não encontrado com o email informado.');
-        return;
-      }
-
-      if (destinatario.id == widget.usuario.id) {
-        _mostrarErro('Não é possível transferir para si mesmo.');
-        return;
-      }
-
-      if (!mounted) return;
-      final confirmado = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Confirmar transferência'),
-          content: Text(
-            'Transferir ${CurrencyFormatter.format(valor)} para '
-            '${destinatario.nomeCompleto}?',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancelar'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context, true),
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1B8C3E)),
-              child: const Text('Confirmar', style: TextStyle(color: Colors.white)),
-            ),
-          ],
-        ),
-      );
-
-      if (!mounted) return;
-
-      if (confirmado != true) {
-        setState(() => _carregando = false);
-        return;
-      }
-
-      final transacao = Transacao(
-        usuarioId: widget.usuario.id!,
-        destinatarioId: destinatario.id!,
-        tipo: TipoTransacao.transferencia,
-        valor: valor,
-        dataHora: DateTime.now(),
-        descricao: _descricaoController.text.trim(),
-      );
-
-      await _transacaoRepo.insert(transacao);
-
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Transferência de ${CurrencyFormatter.format(valor)} '
-            'para ${destinatario.nomeCompleto} realizada!',
-          ),
-        ),
-      );
-    }
   }
 
   Future<void> _fazerTransferencia() async {
@@ -173,15 +105,11 @@ class _TransferenciaScreenState extends State<TransferenciaScreen> {
                       return null;
                     },
                   ),
-                  validator: Validators.email,
-                ),
-                const SizedBox(height: 16),
-
-                // ── Valor ──
-                TextFormField(
-                  controller: _valorController,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
+                  CustomTextField(
+                    controller: _valueController,
+                    label: 'Valor',
+                    hintText: 'R\$ 0,00',
+                    keyboardType: TextInputType.number,
                   ),
                   const SizedBox(height: 20),
                   CustomTextField(

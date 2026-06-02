@@ -22,24 +22,8 @@ class _LoginScreenState extends State<LoginScreen>
   bool _carregando = false;
   bool _senhaVisivel = false;
   bool _biometriaDisponivel = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _verificarBiometria();
-  }
-
-  Future<void> _verificarBiometria() async {
-    final canAuthenticateWithBiometrics = await _localAuth.canCheckBiometrics;
-    final canAuthenticate = canAuthenticateWithBiometrics || await _localAuth.isDeviceSupported();
-    
-    if (!canAuthenticate) return;
-
-    final savedUserId = await _secureStorage.getLastLoggedUserId();
-    if (savedUserId != null) {
-      setState(() => _biometriaDisponivel = true);
-    }
-  }
+  final _localAuth = LocalAuthentication();
+  final _secureStorage = SecureStorageService();
 
   late AnimationController _animController;
   late Animation<Offset> _slideAnimation;
@@ -48,6 +32,7 @@ class _LoginScreenState extends State<LoginScreen>
   @override
   void initState() {
     super.initState();
+    _verificarBiometria();
     _animController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
@@ -64,6 +49,20 @@ class _LoginScreenState extends State<LoginScreen>
     );
     _animController.forward();
   }
+
+  Future<void> _verificarBiometria() async {
+    final canAuthenticateWithBiometrics = await _localAuth.canCheckBiometrics;
+    final canAuthenticate = canAuthenticateWithBiometrics || await _localAuth.isDeviceSupported();
+    
+    if (!canAuthenticate) return;
+
+    final savedUserId = await _secureStorage.getLastLoggedUserId();
+    if (savedUserId != null) {
+      setState(() => _biometriaDisponivel = true);
+    }
+  }
+
+
 
   @override
   void dispose() {
@@ -355,7 +354,7 @@ class _LoginScreenState extends State<LoginScreen>
                             ),
                           );
                         },
-                            child: const Text(
+                            child: Text(
                               'Esqueceu sua senha?',
                               style: TextStyle(
                                 color: isDark ? theme.colorScheme.primary : verde,
@@ -418,7 +417,7 @@ class _LoginScreenState extends State<LoginScreen>
                                 ),
                               );
                             },
-                            icon: const Icon(
+                            icon: Icon(
                               Icons.fingerprint,
                               color: _biometriaDisponivel 
                                 ? (isDark ? Colors.white : verde) 

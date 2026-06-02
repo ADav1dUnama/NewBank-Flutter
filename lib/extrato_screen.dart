@@ -3,6 +3,7 @@ import 'package:newbank/transferencia_screen.dart';
 import 'package:newbank/cotacao_screen.dart';
 import 'package:newbank/models/usuario.dart';
 import 'package:newbank/models/transacao.dart';
+import 'package:newbank/services/currency_formatter.dart';
 import 'package:newbank/repositories/transacao_repository.dart';
 
 class ExtratoScreen extends StatefulWidget {
@@ -461,7 +462,7 @@ class _ExtratoScreenState extends State<ExtratoScreen> {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    _formatarValor(valor, tipoStr),
+                    CurrencyFormatter.formatWithSign(transacao.valor.toInt()),
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
